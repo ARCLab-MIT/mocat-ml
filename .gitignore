@@ -1,3 +1,10 @@
+##
+# Victor
+##
+
+# Ignore the content of the folders starting with Trash-
+.Trash-*/
+
 _docs/
 _proc/
 
