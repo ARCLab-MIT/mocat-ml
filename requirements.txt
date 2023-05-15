@@ -1,2 +1,6 @@
 nbdev
-git+https://github.com/timeseriesAI/tsai.git
+git+https://github.com/vrodriguezf/tsai.git@dev
+wandb
+optuna
+papermill
+seaborn
