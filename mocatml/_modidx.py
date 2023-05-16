@@ -5,4 +5,5 @@ d = { 'settings': { 'branch': 'main',
                 'doc_host': 'https://arclab.github.io',
                 'git_url': 'https://github.com/arclab/orbitalrisk_ML',
                 'lib_path': 'mocatml'},
-  'syms': {'mocatml.utils': {'mocatml.utils.convert_uuids_to_indices': ('utils.html#convert_uuids_to_indices', 'mocatml/utils.py')}}}
+  'syms': { 'mocatml.utils': { 'mocatml.utils.convert_uuids_to_indices': ('utils.html#convert_uuids_to_indices', 'mocatml/utils.py'),
+                               'mocatml.utils.percent_rel_error_': ('utils.html#percent_rel_error_', 'mocatml/utils.py')}}}
