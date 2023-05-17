@@ -4,6 +4,7 @@ data:
 lr_max: null # Maximum learning rate. If none, it will be computed automatically
 n_epoch: 25 # Number of epochs to train for
 seed: 42 # random seed
+tmp_folder: 'tmp' # Folder to store temporary files
 wandb:
   enabled: False # To use it, the environment variable WANDB_API_KEY must be set
   log_learner: False # Log learner to wandb
