@@ -1,4 +1,6 @@
 bs: 8 # batch size
+data:
+    path: '~/data/density_data/TLE_density_all.mat'
 lr_max: null # Maximum learning rate. If none, it will be computed automatically
 n_epoch: 25 # Number of epochs to train for
 seed: 42 # random seed
