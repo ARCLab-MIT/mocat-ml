@@ -2,6 +2,6 @@ arch:
   name: 'TSiT' # see 'all_arch_names' in tsai
   config_file: null # Absolute, or relative to the execution environment. Null for default
 lookback: 12 # number of previous steps to consider
-horizon: 12 # number of steps into the future
-sel_steps: 48 # number of steps to select
+horizon: 1 # number of steps into the future
+sel_steps: null # number of steps to select (null to select all of them)
 stride: 6 # number of steps between two consecutive windows (null for non-overlapping windows)
