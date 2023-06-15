@@ -2,6 +2,12 @@
 # Victor
 ##
 .devcontainer/devcontainer.env
+.devcontainer/devcontainer.env
+# Ignore the folder .Trash-1000
+.Trash-1000
+# Ignore every folder named wandb, regardless of where it is
+wandb
+models
 
 # Ignore the content of the folders starting with Trash-
 .Trash-*/
