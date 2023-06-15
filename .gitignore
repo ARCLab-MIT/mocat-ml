@@ -1,6 +1,7 @@
 ##
 # Victor
 ##
+.devcontainer/devcontainer.env
 
 # Ignore the content of the folders starting with Trash-
 .Trash-*/
