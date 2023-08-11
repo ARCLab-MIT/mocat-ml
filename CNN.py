@@ -73,6 +73,9 @@ class AutoEncoder(nn.Module):
         x = self.decoder(x)
         return x
     
+    def encrypt(self, img):
+        return self.encoder(img)
+    
     def train_epoch(self, device, dataloader, loss_fn, optimizer):
         self.train()
         train_loss = []
@@ -120,9 +123,6 @@ def train_epoch(encoder, decoder, device, dataloader, loss_fn, optimizer):
     train_loss = []
     # Iterate the dataloader (we do not need the label values, this is unsupervised learning)
     for image_batch in dataloader:
-        # print(image_batch.shape)
-        # image_batch = image_batch.to(device).unsqueeze(0).transpose(0, 1)
-        # print(image_batch.shape)
         encoded_data = encoder(image_batch)
         decoded_data = decoder(encoded_data)
 
