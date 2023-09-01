@@ -76,6 +76,9 @@ class AutoEncoder(nn.Module):
     def encrypt(self, img):
         return self.encoder(img)
     
+    def decrypt(self, encoded_img):
+        return self.decoder(encoded_img)
+    
     def train_epoch(self, device, dataloader, loss_fn, optimizer):
         self.train()
         train_loss = []
@@ -100,7 +103,6 @@ class AutoEncoder(nn.Module):
                 recon_batch = self(image_batch.to(device))
                 val_loss.append(loss_fn(recon_batch, image_batch).item())
         return val_loss
-    
     
 # tsai library dataset - tsdataset or tsdataloader -  for sequences
 class CustomDataset(Dataset):
