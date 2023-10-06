@@ -7,6 +7,13 @@
 # Ignore every folder named wandb, regardless of where it is
 wandb
 models
+time_model
+data_numpy
+
+#Ignore results (Sumiya)
+plots
+training_plots
+draft_nbs
 
 # Ignore the content of the folders starting with Trash-
 .Trash-*/
