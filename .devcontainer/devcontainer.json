@@ -40,7 +40,7 @@
 				"ms-python.python",
 				"ms-python.vscode-pylance",
 				"ms-toolsai.jupyter",
-				"github.copilot-nightly",
+				"github.copilot-chat",
 				"genieai.chatgpt-vscode",
 				"github.vscode-pull-request-github"
 			]
@@ -66,8 +66,8 @@
 			"installCudnn": true
 		}
 	},
-	"runArgs": ["--env-file", ".devcontainer/devcontainer.env"]
-	//"runArgs": ["--env-file", ".devcontainer/devcontainer.env", "--gpus", "all"] // For machines with GPUs
+	//"runArgs": ["--env-file", ".devcontainer/devcontainer.env"]
+	"runArgs": ["--env-file", ".devcontainer/devcontainer.env", "--gpus", "all"] // For machines with GPUs
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	//"postCreateCommand": "pip install --user -r requirements.txt"
