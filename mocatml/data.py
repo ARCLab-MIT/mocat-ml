@@ -46,18 +46,17 @@ class DensityData:
             h: Number of output frames to forecast (horizon).
         """
         self.data = data
-        self.n_frames_input = lbk
-        self.n_frames_output = h
-        self.n_frames_total = self.n_frames_input + self.n_frames_output
-
+        self.lbk = lbk
+        self.h = h
+        
 
     def __getitem__(self, idx):
         """
         Returns a single sample from the dataset, split into input and output sequences.
         """
-        seq = self.data[idx]  # Shape: (lookback, height, width)
-        input = seq[:self.n_frames_input]
-        output = seq[self.n_frames_input:self.n_frames_input + self.n_frames_output]
+        seq = self.data[idx]  # Shape: (lbk+h, height, width)
+        input = seq[:self.lbk]
+        output = seq[self.lbk:self.lbk + self.h]
         
         input_tensor = torch.from_numpy(input).float().unsqueeze(1)  # Add channel dimension
         output_tensor = torch.from_numpy(output).float().unsqueeze(1)  # Add channel dimension
