@@ -1,0 +1,4 @@
+lookback: 12 # number of previous steps to consider
+horizon: 1 # number of steps into the future
+sel_steps: null # number of steps to select (null to select all of them)
+stride: 6 # number of steps between two consecutive windows (null for non-overlapping windows)
