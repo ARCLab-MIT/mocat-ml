@@ -6,7 +6,7 @@
 .Trash-1000
 # Ignore every folder named wandb, regardless of where it is
 wandb
-models
+nbs/models
 time_model
 data_numpy
 
