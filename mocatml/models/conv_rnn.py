@@ -338,9 +338,9 @@ class SimpleModel(Module):
         self.decoder = Decoder(n_out, szs[::-1], ks, rnn_ks, act, blur, attn, norm, debug)
     def forward(self, x):
         enc_outs, h = self.encoder(x)
-        if self.strategy is 'zero':
+        if self.strategy == 'zero':
             dec_in = one_param(self).new_zeros(*enc_outs[-1].shape)
-        elif self.strategy is 'encoder':
+        elif self.strategy == 'encoder':
             dec_in = enc_outs[-1]
         return self.decoder(dec_in, h, enc_outs)
 

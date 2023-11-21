@@ -1,6 +1,6 @@
 bs: 64 # batch size
 data:
-    path: '~/arclab_shared/mc_density_data/comb_am_rp.npy'
+    path: '~/data/mc_density_data/comb_am_rp.npy'
 device: 'cuda' # 'cpu' or 'cuda'
 horizon: 4 # number of steps into the future
 lr_max: 0.001 # Maximum learning rate. If none, it will be computed automatically
@@ -9,7 +9,7 @@ mmap: True,
 n_epoch: 10 # Number of epochs to train for
 normalize: True
 seed: 42 # random seed
-sel_steps: null # number of steps to select (null to select all of them)
+sel_steps: 50 # number of steps to select (null to select all of them)
 stride: 5 # number of steps between two consecutive windows (null for non-overlapping windows)
 tmp_folder: 'tmp' # Folder to store temporary files
 wandb:

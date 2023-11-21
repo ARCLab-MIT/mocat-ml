@@ -1,0 +1,12 @@
+# Parameters for ConvGRU model
+n_in: 1
+n_out: 1
+szs: [16, 64, 96] # Number of channels for each layer
+ks: 3 # Kernel size
+rnn_ks: 5 # Kernel size for the RNN
+blur: False # whether to apply a blurring filter after upsampling
+attn: False # Use attention
+norm: null # Normalization layers (null, 'batch' for BatchNorm)
+strategy: 'zero' # initialization of the decoder ('zero', 'encoder')
+coord_conv: False # Use coord conv
+debug: False # Debug mode
