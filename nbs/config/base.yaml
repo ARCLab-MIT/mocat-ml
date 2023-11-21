@@ -6,9 +6,10 @@ horizon: 4 # number of steps into the future
 lr_max: 0.001 # Maximum learning rate. If none, it will be computed automatically
 lookback: 4 # number of previous steps to consider
 mmap: True,
-n_epoch: 5 # Number of epochs to train for
+n_epoch: 10 # Number of epochs to train for
+normalize: True
 seed: 42 # random seed
-sel_steps: 200 # number of steps to select (null to select all of them)
+sel_steps: null # number of steps to select (null to select all of them)
 stride: 5 # number of steps between two consecutive windows (null for non-overlapping windows)
 tmp_folder: 'tmp' # Folder to store temporary files
 wandb:
