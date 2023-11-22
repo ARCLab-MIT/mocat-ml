@@ -345,14 +345,26 @@ class SimpleModel(Module):
         return self.decoder(dec_in, h, enc_outs)
 
 # %% ../../nbs_lib/models.conv_rnn.ipynb 44
-def StackLoss(loss_func=MSELossFlat(), axis=-1):
-    def _inner_loss(x,y):
-        x = torch.cat(x, axis)
-        y = torch.cat(y, axis)
-        return loss_func(x,y)
-    return _inner_loss
+# def StackLoss(loss_func=MSELossFlat(), axis=-1):
+#     def _inner_loss(x,y):
+#         x = torch.cat(x, axis)
+#         y = torch.cat(y, axis)
+#         return loss_func(x,y)
+#     return _inner_loss
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 49
+# %% ../../nbs_lib/models.conv_rnn.ipynb 45
+class StackLoss(nn.Module):
+    def __init__(self, loss_func=MSELossFlat(), axis=-1):
+        super().__init__()
+        self.loss_func = loss_func
+        self.axis = axis
+
+    def forward(self, x, y):
+        x = torch.cat(x, self.axis)
+        y = torch.cat(y, self.axis)
+        return self.loss_func(x, y)
+
+# %% ../../nbs_lib/models.conv_rnn.ipynb 50
 class MultiImageDice(Metric):
     "Dice coefficient metric for binary target in segmentation"
     def __init__(self, axis=1): self.axis = axis

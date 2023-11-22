@@ -1,0 +1,13 @@
+ddata: 
+  path: '~/arclab_shared/mc_density_data/TLE_density_all_x15x15.mat'
+  valid_split: True # if True, the data will be split using the learner's config 
+device: 'cpu'
+learner:
+  wandb:
+    enabled: True
+    dir: '~/Github/mocat-ml'
+    download_path: 'wandb/artifacts/density-forecaster' # relative to wandb dir
+  # local path if wandb is False, otherwise wandb artifact path
+  path: 'vrodriguezf90/mocatml/density-forecaster:v1'
+  fname: 'learner.pkl'
+mmap: True

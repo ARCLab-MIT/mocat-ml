@@ -1,4 +1,0 @@
-study_name: 'general_study'
-study_type: 'bayesian'
-n_trials: 5
-train_nb_path: 'nbs/convgru.ipynb' # Relative to the root of the project

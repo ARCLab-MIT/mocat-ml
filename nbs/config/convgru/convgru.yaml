@@ -4,7 +4,7 @@ n_out: 1
 szs: [16, 64, 96] # Number of channels for each layer
 ks: 3 # Kernel size
 rnn_ks: 5 # Kernel size for the RNN
-blur: False # whether to apply a blurring filter after upsampling
+blur: False # It crashes if true
 attn: False # Use attention
 norm: null # Normalization layers (null, 'batch' for BatchNorm)
 strategy: 'zero' # initialization of the decoder ('zero', 'encoder')
