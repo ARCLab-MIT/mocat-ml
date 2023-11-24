@@ -324,7 +324,7 @@ class StackUnstack(Module):
         inputs = [torch.stack(x, dim=self.dim) for x in args]
         outputs = self.module(*inputs)
         if isinstance(outputs, (tuple, list)):
-            return [self.unbind_images(output, dim=self.dim) for output in outputs]
+            return [self.unbind_densities(output, dim=self.dim) for output in outputs]
         else: return outputs.unbind(dim=self.dim)
 
 # %% ../../nbs_lib/models.conv_rnn.ipynb 39
