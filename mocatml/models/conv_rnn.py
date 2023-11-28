@@ -2,7 +2,7 @@
 
 # %% auto 0
 __all__ = ['AddCoords', 'CoordConv', 'ConvGRU_cell', 'TimeDistributed', 'Encoder', 'UpsampleBlock', 'conditional_crop_pad',
-           'Decoder', 'StackUnstack', 'SimpleModel', 'StackLoss', 'MultiImageDice']
+           'Decoder', 'StackUnstack', 'SimpleModel', 'StackLoss', 'PartialStackLoss', 'MultiImageDice']
 
 # %% ../../nbs_lib/models.conv_rnn.ipynb 2
 from fastai.vision.all import *
@@ -365,6 +365,18 @@ class StackLoss(nn.Module):
         return self.loss_func(x, y)
 
 # %% ../../nbs_lib/models.conv_rnn.ipynb 50
+class PartialStackLoss(StackLoss):
+    """StackLoss but only in a subset of the elements of the list"""
+    @delegates(StackLoss.__init__)
+    def __init__(self, idxs, **kwargs):
+        super().__init__(**kwargs)
+        self.idxs = idxs
+
+    def forward(self, x, y):
+        return super().forward([x[i] for i in self.idxs], 
+                               [y[i] for i in self.idxs])
+
+# %% ../../nbs_lib/models.conv_rnn.ipynb 53
 class MultiImageDice(Metric):
     "Dice coefficient metric for binary target in segmentation"
     def __init__(self, axis=1): self.axis = axis

@@ -1,21 +1,21 @@
 bs: 32 # batch size
 data:
     path: '~/arclab_shared/mc_density_data/comb_am_rp.npy'
-device: 'cuda' # 'cpu' or 'cuda'
+device: 'cpu' # 'cpu' or 'cuda'
 horizon: 4 # number of steps into the future
 lr_max: 0.001 # Maximum learning rate. If none, it will be computed automatically
 lookback: 4 # number of previous steps to consider
 mmap: True
-n_epoch: 1 # Number of epochs to train for
+n_epoch: 2 # Number of epochs to train for
 normalize: True
 num_workers: 0
 seed: 42 # random seed
-sel_steps: 100 # number of steps to select (null to select all of them)
-stride: 5 # number of steps between two consecutive windows (null for non-overlapping windows)
+sel_steps: 12 # number of steps to select (null to select all of them)
+stride: 3 # number of steps between two consecutive windows (null for non-overlapping windows)
 tmp_folder: 'tmp' # Folder to store temporary files
 wandb:
   dir: null # By default it is located in the root of the project
-  enabled: True # To use it, the environment variable WANDB_API_KEY must be set
+  enabled: False # To use it, the environment variable WANDB_API_KEY must be set
   log_learner: False # Log learner to wandb
   mode: 'offline' # 'online' or 'offline' for wandb
   group: null # Useful to group runs that belong to the same optuna study
