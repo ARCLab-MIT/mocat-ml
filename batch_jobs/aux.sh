@@ -15,15 +15,33 @@ module load anaconda/2023a
 num_runs=1
 wandb_group="default_group"
 
+# Function to display help message
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-h] [-r NUM_RUNS] [-g WAND_GROUP]
+Run a batch of machine learning experiments with different configurations.
+
+    -h          display this help and exit
+    -r NUM_RUNS set the number of runs for each configuration (default: 1)
+    -g WANDB_GROUP set the wandb group name (default: "default_group")
+EOF
+}
+
 # Process command line arguments
-while getopts ":r:g:" opt; do
+while getopts ":hr:g:" opt; do
   case $opt in
+    h) 
+       show_help
+       exit 0
+       ;;
     r) num_runs="$OPTARG"
-    ;;
+       ;;
     g) wandb_group="$OPTARG"
-    ;;
-    \?) echo "Invalid option -$OPTARG" >&2
-    ;;
+       ;;
+    \?) echo "Invalid option: -$OPTARG" >&2
+       show_help
+       exit 1
+       ;;
   esac
 done
 

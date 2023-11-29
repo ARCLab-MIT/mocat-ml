@@ -24,7 +24,7 @@ do
 	-p config.device cuda \
         -p config.n_epoch 20 \
         -p config.wandb.enabled True \
-        -p config.wandb.log_learner True \
+        -p config.wandb.log_learner False \
 	-p config.wandb.group lbk_sweep_partial_loss \
         -p config.lookback ${val} \
         -p config.horizon ${val} \
