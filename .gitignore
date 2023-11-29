@@ -170,3 +170,4 @@ checklink/cookies.txt
 # Quarto
 .quarto
 nbs_lib/01_models.conv_rnn.ipynb
+batch_jobs/res.txt
