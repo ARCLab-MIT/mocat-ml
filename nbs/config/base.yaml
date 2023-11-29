@@ -18,6 +18,6 @@ wandb:
   dir: null # By default it is located in the root of the project
   enabled: True # To use it, the environment variable WANDB_API_KEY must be set
   log_learner: False # Log learner to wandb
-  mode: 'disabled' # 'online' or 'offline' for wandb
+  mode: 'offline' # 'online' or 'offline' for wandb
   group: null # Useful to group runs that belong to the same optuna study
   project: 'mocatml' # Name of wandb project
