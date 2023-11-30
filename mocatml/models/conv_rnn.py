@@ -354,10 +354,11 @@ class SimpleModel(Module):
 
 # %% ../../nbs_lib/models.conv_rnn.ipynb 45
 class StackLoss(nn.Module):
-    def __init__(self, loss_func=MSELossFlat(), axis=-1):
-        super().__init__()
+    def __init__(self, loss_func=MSELossFlat(reduction='mean'), axis=-1 , **kwargs):
+        super().__init__(**kwargs)
         self.loss_func = loss_func
         self.axis = axis
+        #self.reduction = reduction
 
     def forward(self, x, y):
         x = torch.cat(x, self.axis)
@@ -372,9 +373,10 @@ class PartialStackLoss(StackLoss):
         super().__init__(**kwargs)
         self.idxs = idxs
 
-    def forward(self, x, y):
+    def forward(self, x, y, **kwargs):
         return super().forward([x[i] for i in self.idxs], 
-                               [y[i] for i in self.idxs])
+                               [y[i] for i in self.idxs],
+                               **kwargs)
 
 # %% ../../nbs_lib/models.conv_rnn.ipynb 53
 class MultiImageDice(Metric):

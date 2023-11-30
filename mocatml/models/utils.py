@@ -11,9 +11,24 @@ from fastai.vision.all import Learner
 # %% ../../nbs_lib/models.utils.ipynb 4
 @patch
 @delegates(Learner.get_preds)
-def get_preds_iterative(self:Learner, n_iter=1, **kwargs):
-    "Call get preds iteratively"
-    p, _ = self.get_preds(**kwargs)
+def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False, **kwargs):
+    """
+        Call get preds iteratively on a dataloader with a `DensityTupleTransform`
+        TODO: Crashes if inner=True (kwargs), so it will produce invisible progress
+        bars 
+    """
+    p, t = self.get_preds(dl=dl, **kwargs)
+    ds_copy = copy(dl.ds) # Useful to move the gap without changing the original ds
+    if track_losses:
+        losses = [self.loss_func(p,t).item()]
     for _ in range(n_iter-1):
-        p = self.model(p)
-    return p
+        ds_copy.data = ds_copy.data[:,ds_copy.h:] # Move h steps forward
+        dl_new = dl.new(TfmdLists(range(len(ds_copy)), 
+                                    DensityTupleTransform(ds_copy)))
+        p,t = self.get_preds(dl=dl_new, **kwargs)
+        if track_losses:
+            losses.append(self.loss_func(p,t).item())
+    if track_losses:
+        return p, t, losses
+    else:
+        return p, t
