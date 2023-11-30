@@ -6,7 +6,7 @@ __all__ = []
 # %% ../../nbs_lib/models.utils.ipynb 3
 from .conv_rnn import *
 from fastcore.all import *
-from fastai.vision.all import Learner
+from fastai.vision.all import Learner, tensor
 
 # %% ../../nbs_lib/models.utils.ipynb 4
 @patch
