@@ -41,7 +41,6 @@
 				"ms-python.vscode-pylance",
 				"ms-toolsai.jupyter",
 				"github.copilot-chat",
-				"genieai.chatgpt-vscode",
 				"github.vscode-pull-request-github"
 			]
 		}

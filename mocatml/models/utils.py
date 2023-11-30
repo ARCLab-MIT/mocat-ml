@@ -32,3 +32,18 @@ def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False, **kwargs
         return p, t, losses
     else:
         return p, t
+
+# %% ../../nbs_lib/models.utils.ipynb 6
+@patch
+def get_individual_losses(self:Learner, p, t):
+    """
+        Get the loss for each element given predictions and targets computed
+        in learn.get_preds
+    """
+    individual_losses = []
+    for i in range(p[0].shape[0]):
+        p_element = tuple(p_horizon[i] for p_horizon in p) 
+        t_element = tuple(t_horizon[i] for t_horizon in t)
+        loss = self.loss_func(p_element, t_element)
+        individual_losses.append(loss)
+    return tensor(individual_losses)

@@ -354,18 +354,17 @@ class SimpleModel(Module):
 
 # %% ../../nbs_lib/models.conv_rnn.ipynb 45
 class StackLoss(nn.Module):
-    def __init__(self, loss_func=MSELossFlat(reduction='mean'), axis=-1 , **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, loss_func=MSELossFlat(), axis=-1):
+        super().__init__()
         self.loss_func = loss_func
         self.axis = axis
-        #self.reduction = reduction
 
     def forward(self, x, y):
         x = torch.cat(x, self.axis)
         y = torch.cat(y, self.axis)
         return self.loss_func(x, y)
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 50
+# %% ../../nbs_lib/models.conv_rnn.ipynb 51
 class PartialStackLoss(StackLoss):
     """StackLoss but only in a subset of the elements of the list"""
     @delegates(StackLoss.__init__)
@@ -378,7 +377,7 @@ class PartialStackLoss(StackLoss):
                                [y[i] for i in self.idxs],
                                **kwargs)
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 53
+# %% ../../nbs_lib/models.conv_rnn.ipynb 54
 class MultiImageDice(Metric):
     "Dice coefficient metric for binary target in segmentation"
     def __init__(self, axis=1): self.axis = axis
