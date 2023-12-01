@@ -5,6 +5,7 @@ __all__ = []
 
 # %% ../../nbs_lib/models.utils.ipynb 3
 from .conv_rnn import *
+from ..data import *
 from fastcore.all import *
 from fastai.vision.all import Learner, tensor
 
@@ -47,3 +48,41 @@ def get_individual_losses(self:Learner, p, t):
         loss = self.loss_func(p_element, t_element)
         individual_losses.append(loss)
     return tensor(individual_losses)
+
+# %% ../../nbs_lib/models.utils.ipynb 8
+@patch
+def predict_at(self:Learner, idx, ds_idx=1, ds=None, with_input=False):
+    """
+        Predict at a given index on a given dataset, or in the learner's
+    """
+    ds = self.dls[ds_idx].ds if ds is None else ds
+    tl = TfmdLists([idx], DensityTupleTransform(ds))
+    dl = self.dls.new(tl)
+    if with_input: 
+        inp,p,t = self.get_preds(dl=dl, with_input=True, inner=True)
+        return inp,p,t
+    else:
+        p, t = self.get_preds(dl=dl, with_input=False, inner=True)
+        return p, t
+
+# %% ../../nbs_lib/models.utils.ipynb 10
+@patch
+@delegates(Learner.predict_at)
+def show_preds_at(self:Learner, idx, p=None, t=None, inp=None, with_input=None, 
+                  with_targets=False, figsize=(5,3), **kwargs):
+    """
+        Show predictions at a given index
+    """
+    if t is not None: with_targets=True
+    if inp is not None: with_input=True
+    if p is None:
+        inp, p, t = self.predict_at(idx, with_input=True, **kwargs)
+        idx = 0
+    if with_input:
+        i_seq = DensitySeq.create([inp[i][idx] for i in range(len(inp))])
+        i_seq.show(figsize=figsize, title="Input", x_disc=RP_DISC, y_disc=AM_DISC)
+    p_seq = DensitySeq.create([p[i][idx] for i in range(len(p))])
+    p_seq.show(figsize=figsize, start_epoch=len(p), title="Prediction", x_disc=RP_DISC, y_disc=AM_DISC)
+    if with_targets:
+        t_seq = DensitySeq.create([t[i][idx] for i in range(len(t))])
+        t_seq.show(figsize=figsize, start_epoch=len(p), title="Target", x_disc=RP_DISC, y_disc=AM_DISC)

@@ -2,19 +2,19 @@ data:
   path: '~/arclab_shared/mc_density_data/comb_am_rp.npy'
   split_idx: 1 # 0 for training, 1 for validation, 2 for testing, None to use the whole dataset
 device: 'cpu'
-horizon: null # If wandb is enabled, it will be retrieved from the artifact
+horizon: 4 # If wandb is enabled, it will be retrieved from the artifact
 learner:
   wandb:
-    enabled: True
+    enabled: False
     dir: '~/Github/mocat-ml'
     download_path: 'wandb/artifacts/density-forecaster' # relative to wandb dir
   # local path if wandb is False, otherwise wandb artifact path
-  path: 'vrodriguezf90/mocatml/density-forecaster:v3'
+  path: 'tmp'
   fname: 'learner.pkl'
-lookback: null # If wandb is enabled, it will be retrieved from the artifact
+lookback: 4 # If wandb is enabled, it will be retrieved from the artifact
 mmap: True
 norm:
   mean: null # If null, it will be retrieved from the learner
   std: null # If null, it will be retrieved from the learner
-sel_steps: null # If wandb is enabled, it will be retrieved from the artifact
-stride: null # If wandb is enabled, it will be retrieved from the artifact
+sel_steps: 100 # If wandb is enabled, it will be retrieved from the artifact
+stride: 2 # If wandb is enabled, it will be retrieved from the artifact

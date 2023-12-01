@@ -111,15 +111,24 @@ class DensitySeq(fastuple):
     @classmethod
     def create(cls, t):
         return cls(tuple(im for im in t))    
-    def show(self, ctx=None, separator_value=225, start_epoch=0, x_disc=None, 
-             y_disc=None, figsize=(5,5), **kwargs): 
-        n = len(self)
+
+    def show(self, start_epoch=0, x_disc=None, y_disc=None, title=None, 
+             figsize=(5,3), epochs=None, **kwargs): 
+        # If idxs is not provided, use all indices
+        if epochs is None:
+            epochs = range(len(self))
+
+        # Number of plots is now the length of idxs
+        n = len(epochs)
         fig, axes = plt.subplots(1, n, figsize=(n*figsize[0], figsize[1]))
 
         # Ensure axes is always an iterable (list of Axes)
         if n == 1: axes = [axes]
 
-        for i, (t, ax) in enumerate(zip(self, axes)):
+        for plot_idx, seq_idx in enumerate(epochs):
+            t = self[seq_idx]
+            ax = axes[plot_idx]
+
             # Display each tensor with specified extent
             if x_disc is not None and y_disc is not None:
                 extent = [np.min(x_disc), np.max(x_disc), np.min(y_disc), np.max(y_disc)]
@@ -129,20 +138,23 @@ class DensitySeq(fastuple):
 
             # Set axis labels
             ax.set_xlabel('rp [km]' if x_disc is not None else '')
-            ax.set_ylabel('Am [m^2/kg]' if i == 0 and y_disc is not None else '')  # Y label only for first plot
+            ax.set_ylabel('Am [m^2/kg]' if plot_idx == 0 and y_disc is not None else '')
 
             # Set individual titles
-            ax.set_title(f'Epoch t {f"+{start_epoch + i}" if i>0 else ""}')
+            epoch_label = f'Epoch t{f"+{start_epoch + seq_idx}" if start_epoch + seq_idx > 0 else ""}'
+            ax.set_title(epoch_label)
 
             # Enable the axis
             ax.axis('on')
+        
+        if title is not None: fig.suptitle(title)
 
         # Adjust layout to make room for x-axis labels if rotated
         plt.tight_layout()
         return axes
 
 
-# %% ../nbs_lib/data.ipynb 14
+# %% ../nbs_lib/data.ipynb 15
 class DensityTupleTransform(Transform):
     def __init__(self, ds):
         self.ds = ds
@@ -151,7 +163,7 @@ class DensityTupleTransform(Transform):
         x,y = self.ds[idx]
         return DensitySeq.create(x), DensitySeq.create(y)
 
-# %% ../nbs_lib/data.ipynb 20
+# %% ../nbs_lib/data.ipynb 21
 # TODO: this is broken
 @typedispatch
 def show_batch(x:DensitySeq, y:DensitySeq, samples, ctxs=None, max_n=6, nrows=None, 
@@ -162,7 +174,7 @@ def show_batch(x:DensitySeq, y:DensitySeq, samples, ctxs=None, max_n=6, nrows=No
     for i,ctx in enumerate(ctxs): 
         samples[i][0].show(ctx=ctx[0]), samples[i][1].show(ctx=ctx[1])
 
-# %% ../nbs_lib/data.ipynb 22
+# %% ../nbs_lib/data.ipynb 23
 def show_density_forecast(p, idx, figsize=(8,4), **kwargs):
     """
         Show predictions given as a list of tensors.
