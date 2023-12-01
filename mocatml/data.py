@@ -113,7 +113,7 @@ class DensitySeq(fastuple):
         return cls(tuple(im for im in t))    
 
     def show(self, start_epoch=0, x_disc=None, y_disc=None, title=None, 
-             figsize=(5,3), epochs=None, **kwargs): 
+             figsize=(4,3), epochs=None, **kwargs): 
         # If idxs is not provided, use all indices
         if epochs is None:
             epochs = range(len(self))

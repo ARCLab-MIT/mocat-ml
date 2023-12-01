@@ -67,9 +67,9 @@ def predict_at(self:Learner, idx, ds_idx=1, ds=None, with_input=False):
 
 # %% ../../nbs_lib/models.utils.ipynb 10
 @patch
-@delegates(Learner.predict_at)
+@delegates(DensitySeq.show)
 def show_preds_at(self:Learner, idx, p=None, t=None, inp=None, with_input=None, 
-                  with_targets=False, figsize=(5,3), **kwargs):
+                  with_targets=False, **kwargs):
     """
         Show predictions at a given index
     """
@@ -80,9 +80,11 @@ def show_preds_at(self:Learner, idx, p=None, t=None, inp=None, with_input=None,
         idx = 0
     if with_input:
         i_seq = DensitySeq.create([inp[i][idx] for i in range(len(inp))])
-        i_seq.show(figsize=figsize, title="Input", x_disc=RP_DISC, y_disc=AM_DISC)
+        i_seq.show(title="Input", x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
     p_seq = DensitySeq.create([p[i][idx] for i in range(len(p))])
-    p_seq.show(figsize=figsize, start_epoch=len(p), title="Prediction", x_disc=RP_DISC, y_disc=AM_DISC)
+    p_seq.show(start_epoch=len(p), title="Prediction", 
+               x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
     if with_targets:
         t_seq = DensitySeq.create([t[i][idx] for i in range(len(t))])
-        t_seq.show(figsize=figsize, start_epoch=len(p), title="Target", x_disc=RP_DISC, y_disc=AM_DISC)
+        t_seq.show(start_epoch=len(p), title="Target", 
+                   x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)

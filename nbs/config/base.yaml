@@ -9,6 +9,9 @@ mmap: True
 n_epoch: 20 # Number of epochs to train for
 normalize: True
 num_workers: 0
+# Array with steps of the prediction to compute the loss. 
+# If null, it will be computed for all steps
+partial_loss: null 
 seed: 42 # random seed (null for random)
 save_learner: True # Save learner locally
 sel_steps: 100 # number of steps to select (null to select all of them)
