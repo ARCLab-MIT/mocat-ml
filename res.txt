@@ -1,0 +1,3 @@
+Input Notebook:  convgru.ipynb
+Output Notebook: pm_tmp.ipynb
+Black is not installed, parameters wont be formatted
