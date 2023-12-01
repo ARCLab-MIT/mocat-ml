@@ -46,6 +46,7 @@ config.wandb.enabled = True
 config.wandb.log_learner = False
 config.lookback = 4
 config.horizon = 4
+config.gap = -3
 config.stride = 4
 config.bs = 32
 config.save_learner = True
@@ -69,7 +70,7 @@ data = data[:, :config.sel_steps]
 data.shape
 
 data_sw = np.lib.stride_tricks.sliding_window_view(data, 
-                                               config.lookback + config.horizon, 
+                                               config.lookback + config.horizon + config.gap, 
                                                axis=1)[:,::config.stride,:]
 samples_per_simulation = data_sw.shape[1]
 data_sw = data_sw.transpose(0,1,4,2,3)
@@ -80,7 +81,7 @@ data_sw.shape
 splits = RandomSplitter()(data)
 splits
 
-ds = DensityData(data_sw, lbk=config.lookback, h=config.horizon)
+ds = DensityData(data_sw, lbk=config.lookback, h=config.horizon, gap=config.gap)
 train_idxs = calculate_sample_idxs(splits[0], samples_per_simulation)
 valid_idxs = calculate_sample_idxs(splits[1], samples_per_simulation)
 len(train_idxs), len(valid_idxs)

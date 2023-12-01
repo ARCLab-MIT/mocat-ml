@@ -88,6 +88,12 @@ class DensityData:
         self.data = data
         self.lbk = lbk
         self.h = h
+        # if gap is lower than 0, check that is no lower than -h
+        if gap < 0:
+            assert gap > -h, "negative gap must be greater than -h"
+        else:
+            # Check that the gap is not greater than the length of the sequence
+            assert gap <= data.shape[1] - lbk - h, "gap is too large"
         self.gap = gap
 
     def __getitem__(self, idx):
@@ -106,7 +112,7 @@ class DensityData:
     def __len__(self):
         return len(self.data)
 
-# %% ../nbs_lib/data.ipynb 12
+# %% ../nbs_lib/data.ipynb 13
 class DensitySeq(fastuple):
     @classmethod
     def create(cls, t):
@@ -154,7 +160,7 @@ class DensitySeq(fastuple):
         return axes
 
 
-# %% ../nbs_lib/data.ipynb 15
+# %% ../nbs_lib/data.ipynb 16
 class DensityTupleTransform(Transform):
     def __init__(self, ds):
         self.ds = ds
@@ -163,7 +169,7 @@ class DensityTupleTransform(Transform):
         x,y = self.ds[idx]
         return DensitySeq.create(x), DensitySeq.create(y)
 
-# %% ../nbs_lib/data.ipynb 21
+# %% ../nbs_lib/data.ipynb 22
 # TODO: this is broken
 @typedispatch
 def show_batch(x:DensitySeq, y:DensitySeq, samples, ctxs=None, max_n=6, nrows=None, 
@@ -174,7 +180,7 @@ def show_batch(x:DensitySeq, y:DensitySeq, samples, ctxs=None, max_n=6, nrows=No
     for i,ctx in enumerate(ctxs): 
         samples[i][0].show(ctx=ctx[0]), samples[i][1].show(ctx=ctx[1])
 
-# %% ../nbs_lib/data.ipynb 23
+# %% ../nbs_lib/data.ipynb 24
 def show_density_forecast(p, idx, figsize=(8,4), **kwargs):
     """
         Show predictions given as a list of tensors.

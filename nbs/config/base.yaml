@@ -2,6 +2,7 @@ bs: 32 # batch size
 data:
     path: '~/arclab_shared/mc_density_data/comb_am_rp.npy'
 device: 'cuda' # 'cpu' or 'cuda'
+gap: 0 # gap between the last step of the lookback and the first step of the horizon
 horizon: 4 # number of steps into the future
 lr_max: null # Maximum learning rate. If none, it will be computed automatically
 lookback: 4 # number of previous steps to consider

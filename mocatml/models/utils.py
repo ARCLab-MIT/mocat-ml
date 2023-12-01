@@ -7,18 +7,20 @@ __all__ = []
 from .conv_rnn import *
 from ..data import *
 from fastcore.all import *
-from fastai.vision.all import Learner, tensor
+from fastai.vision.all import *
+from copy import copy
 
 # %% ../../nbs_lib/models.utils.ipynb 4
 @patch
-@delegates(Learner.get_preds)
-def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False, **kwargs):
+@delegates(Learner.get_preds, but=["with_input", "with_loss", "with_decoded"])
+def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False,
+                        with_input=False, **kwargs):
     """
         Call get preds iteratively on a dataloader with a `DensityTupleTransform`
         TODO: Crashes if inner=True (kwargs), so it will produce invisible progress
         bars 
     """
-    p, t = self.get_preds(dl=dl, **kwargs)
+    inp, p, t = self.get_preds(dl=dl, with_input=True, **kwargs)
     ds_copy = copy(dl.ds) # Useful to move the gap without changing the original ds
     if track_losses:
         losses = [self.loss_func(p,t).item()]
@@ -26,13 +28,14 @@ def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False, **kwargs
         ds_copy.data = ds_copy.data[:,ds_copy.h:] # Move h steps forward
         dl_new = dl.new(TfmdLists(range(len(ds_copy)), 
                                     DensityTupleTransform(ds_copy)))
-        p,t = self.get_preds(dl=dl_new, **kwargs)
+        p,t = self.get_preds(dl=dl_new, with_input=False, **kwargs)
         if track_losses:
             losses.append(self.loss_func(p,t).item())
-    if track_losses:
-        return p, t, losses
-    else:
-        return p, t
+    losses = tensor(losses)
+    res  = [p, t]
+    if with_input: res = [inp] + res
+    if track_losses: res = res + [losses]
+    return tuple(res)
 
 # %% ../../nbs_lib/models.utils.ipynb 6
 @patch
@@ -67,9 +70,10 @@ def predict_at(self:Learner, idx, ds_idx=1, ds=None, with_input=False):
 
 # %% ../../nbs_lib/models.utils.ipynb 10
 @patch
-@delegates(DensitySeq.show)
+@delegates(DensitySeq.show, but=["title", "start_epoch"])
 def show_preds_at(self:Learner, idx, p=None, t=None, inp=None, with_input=None, 
-                  with_targets=False, **kwargs):
+                  with_targets=False, titles=["Input", "Prediction", "Target"],
+                  start_epoch=0, **kwargs):
     """
         Show predictions at a given index
     """
@@ -80,11 +84,11 @@ def show_preds_at(self:Learner, idx, p=None, t=None, inp=None, with_input=None,
         idx = 0
     if with_input:
         i_seq = DensitySeq.create([inp[i][idx] for i in range(len(inp))])
-        i_seq.show(title="Input", x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
+        i_seq.show(title=titles[0], x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
     p_seq = DensitySeq.create([p[i][idx] for i in range(len(p))])
-    p_seq.show(start_epoch=len(p), title="Prediction", 
+    p_seq.show(start_epoch=start_epoch+len(p), title=titles[1], 
                x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
     if with_targets:
         t_seq = DensitySeq.create([t[i][idx] for i in range(len(t))])
-        t_seq.show(start_epoch=len(p), title="Target", 
+        t_seq.show(start_epoch=start_epoch+len(p), title=titles[2], 
                    x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)

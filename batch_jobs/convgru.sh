@@ -20,6 +20,7 @@ papermill convgru.ipynb pm_tmp.ipynb \
 	-p config.wandb.log_learner False \
 	-p config.lookback 4 \
 	-p config.horizon 4 \
+	-p config.gap -3 \
 	-p config.stride 4 \
 	-p config.bs 32 \
 	-p config.save_learner True \
