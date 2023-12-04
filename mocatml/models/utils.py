@@ -25,7 +25,7 @@ def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False,
     if track_losses:
         losses = [self.loss_func(p,t).item()]
     for _ in range(n_iter-1):
-        ds_copy.data = ds_copy.data[:,(ds_copy.lbk):] # Move 1 window forward
+        ds_copy.data = ds_copy.data[:,(ds_copy.lbk+ds_copy.gap):] # Move 1 window forward
         # Replace the first inputs of the dataset with the predictions
         p_dseqs = [DensitySeq.from_preds_or_targs(p, i, to_array=True) \
                    for i in range(len(p[0]))]
