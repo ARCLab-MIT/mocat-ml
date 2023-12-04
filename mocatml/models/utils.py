@@ -22,7 +22,7 @@ def stack_density_list_as_preds_targs(l):
     return final_preds
 
 
-# %% ../../nbs_lib/models.utils.ipynb 6
+# %% ../../nbs_lib/models.utils.ipynb 7
 @patch
 @delegates(Learner.get_preds, but=["with_input", "with_loss", "with_decoded"])
 def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False,
@@ -33,11 +33,15 @@ def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False,
         bars 
     """
     inp, p, t = self.get_preds(dl=dl, with_input=True, **kwargs)
-    ds_copy = copy(dl.ds) # Useful to move the gap without changing the original ds
+    #ds_copy = copy(dl.ds) # Useful to move the gap without changing the original ds
+    ds = dl.ds
     if track_losses:
         losses = [self.loss_func(p,t).item()]
-    for _ in range(n_iter-1):
-        ds_copy.data = ds_copy.data[:,(ds_copy.lbk+ds_copy.gap):] # Move 1 window forward
+    for iter in range(n_iter-1):
+        data_copy = ds.data[:,(iter+1)*(ds.lbk+ds.gap):\
+                                 (iter+1)*(ds.lbk+ds.gap) + ds.lbk + ds.h].copy()
+        #ds_copy.data = ds_copy.data[:,(ds_copy.lbk+ds_copy.gap):] # Move 1 window forward
+        ds_copy = DensityData(data_copy, lbk=ds.lbk, h=ds.h, gap=ds.gap)
         tl = TfmdLists(range(len(ds_copy)), DensityTupleTransform(ds_copy))
         # Save the targets before replacing data
         t = stack_density_list_as_preds_targs([y for _,y in tl])
@@ -58,7 +62,7 @@ def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False,
         res = res + [losses]
     return tuple(res)
 
-# %% ../../nbs_lib/models.utils.ipynb 8
+# %% ../../nbs_lib/models.utils.ipynb 9
 @patch
 def get_individual_losses(self:Learner, p, t):
     """
@@ -73,7 +77,7 @@ def get_individual_losses(self:Learner, p, t):
         individual_losses.append(loss)
     return tensor(individual_losses)
 
-# %% ../../nbs_lib/models.utils.ipynb 10
+# %% ../../nbs_lib/models.utils.ipynb 11
 @patch
 def predict_at(self:Learner, idx, ds_idx=1, ds=None, with_input=False):
     """
@@ -89,7 +93,7 @@ def predict_at(self:Learner, idx, ds_idx=1, ds=None, with_input=False):
         p, t = self.get_preds(dl=dl, with_input=False, inner=True)
         return p, t
 
-# %% ../../nbs_lib/models.utils.ipynb 12
+# %% ../../nbs_lib/models.utils.ipynb 13
 @patch
 @delegates(DensitySeq.show, but=["title", "start_epoch"])
 def show_preds_at(self:Learner, idx, p=None, t=None, inp=None, with_input=None, 
