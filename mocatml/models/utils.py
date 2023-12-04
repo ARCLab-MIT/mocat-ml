@@ -30,7 +30,7 @@ def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False,
         p_dseqs = [DensitySeq.from_preds_or_targs(p, i, to_array=True) \
                    for i in range(len(p[0]))]
         preds_data = np.stack(p_dseqs).squeeze()
-        ds_copy.data[:,:ds.lbk] = preds_data
+        ds_copy.data[:,:ds_copy.lbk] = preds_data
         dl_new = dl.new(TfmdLists(range(len(ds_copy)), 
                                     DensityTupleTransform(ds_copy)))
         p,t = self.get_preds(dl=dl_new, with_input=False, **kwargs)
