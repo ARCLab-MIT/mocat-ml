@@ -25,7 +25,7 @@ def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False,
     if track_losses:
         losses = [self.loss_func(p,t).item()]
     for _ in range(n_iter-1):
-        ds_copy.data = ds_copy.data[:,ds_copy.h:] # Move h steps forward
+        ds_copy.data = ds_copy.data[:,(ds_copy.lbk + ds_copy.gap):] # Move 1 window forward
         dl_new = dl.new(TfmdLists(range(len(ds_copy)), 
                                     DensityTupleTransform(ds_copy)))
         p,t = self.get_preds(dl=dl_new, with_input=False, **kwargs)
