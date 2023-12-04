@@ -10,7 +10,7 @@ from fastcore.all import *
 from fastai.vision.all import *
 from copy import copy
 
-# %% ../../nbs_lib/models.utils.ipynb 4
+# %% ../../nbs_lib/models.utils.ipynb 6
 @patch
 @delegates(Learner.get_preds, but=["with_input", "with_loss", "with_decoded"])
 def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False,
@@ -25,7 +25,12 @@ def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False,
     if track_losses:
         losses = [self.loss_func(p,t).item()]
     for _ in range(n_iter-1):
-        ds_copy.data = ds_copy.data[:,(ds_copy.lbk + ds_copy.gap):] # Move 1 window forward
+        ds_copy.data = ds_copy.data[:,(ds_copy.lbk):] # Move 1 window forward
+        # Replace the first inputs of the dataset with the predictions
+        p_dseqs = [DensitySeq.from_preds_or_targs(p, i, to_array=True) \
+                   for i in range(len(p[0]))]
+        preds_data = np.stack(p_dseqs).squeeze()
+        ds_copy.data[:,:ds.lbk] = preds_data
         dl_new = dl.new(TfmdLists(range(len(ds_copy)), 
                                     DensityTupleTransform(ds_copy)))
         p,t = self.get_preds(dl=dl_new, with_input=False, **kwargs)
@@ -37,7 +42,7 @@ def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False,
     if track_losses: res = res + [losses]
     return tuple(res)
 
-# %% ../../nbs_lib/models.utils.ipynb 6
+# %% ../../nbs_lib/models.utils.ipynb 8
 @patch
 def get_individual_losses(self:Learner, p, t):
     """
@@ -52,7 +57,7 @@ def get_individual_losses(self:Learner, p, t):
         individual_losses.append(loss)
     return tensor(individual_losses)
 
-# %% ../../nbs_lib/models.utils.ipynb 8
+# %% ../../nbs_lib/models.utils.ipynb 10
 @patch
 def predict_at(self:Learner, idx, ds_idx=1, ds=None, with_input=False):
     """
@@ -68,7 +73,7 @@ def predict_at(self:Learner, idx, ds_idx=1, ds=None, with_input=False):
         p, t = self.get_preds(dl=dl, with_input=False, inner=True)
         return p, t
 
-# %% ../../nbs_lib/models.utils.ipynb 10
+# %% ../../nbs_lib/models.utils.ipynb 12
 @patch
 @delegates(DensitySeq.show, but=["title", "start_epoch"])
 def show_preds_at(self:Learner, idx, p=None, t=None, inp=None, with_input=None, 

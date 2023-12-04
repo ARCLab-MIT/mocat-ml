@@ -10,7 +10,8 @@ from fastcore.all import *
 import matplotlib.pyplot as plt
 from tsai.data.preparation import SlidingWindow
 from fastai.vision.all import *
-from tsai.utils import np_load_compressed
+from tsai.utils import np_load_compressed, toarray
+import torch
 
 # %% ../nbs_lib/data.ipynb 3
 # TODO: This should be an argument to create the data
@@ -117,6 +118,13 @@ class DensitySeq(fastuple):
     @classmethod
     def create(cls, t):
         return cls(tuple(im for im in t))    
+    
+    @classmethod
+    def from_preds_or_targs(cls, x, idx, dim=1, to_array=False):
+        if to_array:
+            return cls(toarray(torch.stack(x, dim=dim)[idx]))
+        else:
+            return cls(torch.stack(x, dim=dim)[idx])
 
     def show(self, start_epoch=0, x_disc=None, y_disc=None, title=None, 
              figsize=(4,3), epochs=None, **kwargs): 
@@ -160,7 +168,7 @@ class DensitySeq(fastuple):
         return axes
 
 
-# %% ../nbs_lib/data.ipynb 16
+# %% ../nbs_lib/data.ipynb 17
 class DensityTupleTransform(Transform):
     def __init__(self, ds):
         self.ds = ds
@@ -169,7 +177,7 @@ class DensityTupleTransform(Transform):
         x,y = self.ds[idx]
         return DensitySeq.create(x), DensitySeq.create(y)
 
-# %% ../nbs_lib/data.ipynb 22
+# %% ../nbs_lib/data.ipynb 23
 # TODO: this is broken
 @typedispatch
 def show_batch(x:DensitySeq, y:DensitySeq, samples, ctxs=None, max_n=6, nrows=None, 
@@ -180,7 +188,7 @@ def show_batch(x:DensitySeq, y:DensitySeq, samples, ctxs=None, max_n=6, nrows=No
     for i,ctx in enumerate(ctxs): 
         samples[i][0].show(ctx=ctx[0]), samples[i][1].show(ctx=ctx[1])
 
-# %% ../nbs_lib/data.ipynb 24
+# %% ../nbs_lib/data.ipynb 25
 def show_density_forecast(p, idx, figsize=(8,4), **kwargs):
     """
         Show predictions given as a list of tensors.
