@@ -9,6 +9,10 @@ wandb
 nbs/models
 time_model
 data_numpy
+data
+models
+nbs/resnet
+
 
 #Ignore results (Sumiya)
 plots
