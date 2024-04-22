@@ -82,13 +82,15 @@ if __name__ == "__main__":
     arg_dict = vars(args)
     
     # Settings
-    config_base = yaml2dict('./config/data-gen.yaml', attrdict=True)
-    config = AttrDict(config_base)
-        
     print("CONFIG \n", json.dumps(config, indent=4))
     config_base = yaml2dict('./config/base.yaml', attrdict=True)
     config_base.convgru = yaml2dict('./config/convgru/convgru.yaml', attrdict=True)
     config = AttrDict(config_base)
+    
+    for key in ['bs', 'n_epoch']:
+        config[key] = arg_dict[key]
+    
+    print("CONFIG \n", json.dumps(config, indent=4))
 
     DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print("DEVICE: ", DEVICE)
@@ -110,9 +112,9 @@ if __name__ == "__main__":
     val_ds = CustomDataset(data[val_indices])
 
     AE = AutoEncoder(args.enc_dim).to(DEVICE)
-    dls = DataLoaders.from_dsets(train_ds, val_ds, bs = args.bs, pin_memory=True, shuffle = True)
+    dls = DataLoaders.from_dsets(train_ds, val_ds, bs = args.bs, pin_memory=True, num_workers = 4, shuffle = True)
     learn = Learner(dls, AE, loss_func = F.mse_loss, cbs = [ShowGraphCallback()])
-    print(f'Model size {AE.size()}')
+    print(f'Model size {AE.size()}, number of workers {dls.num_workers}')
     lr = learn.lr_find().valley
     learn.fit_one_cycle(args.n_epoch)
 
