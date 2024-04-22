@@ -2,7 +2,6 @@ bs: 32 # batch size
 data:
     path: '~/mocat-ml/data/TLE_density_all_'
     dataset: ['x2x2', 'x5x5', 'x10x10', 'x15x15']
-    usage: [0.25, 0.5, 0.75, 1]
 device: 'cuda' # 'cpu' or 'cuda'
 gap: 0 # gap between the last step of the lookback and the first step of the horizon
 horizon: 4 # number of steps into the future
@@ -22,7 +21,7 @@ stride: 8 # number of steps between two consecutive windows (null for non-overla
 tmp_folder: 'tmp' # Folder to store temporary files
 wandb:
   dir: null # By default it is located in the root of the project
-  enabled: True # To use it, the environment variable WANDB_API_KEY must be set
+  enabled: False # To use it, the environment variable WANDB_API_KEY must be set
   log_learner: False # Log learner to wandb
   mode: 'offline' # 'online' or 'offline' for wandb
   group: null # Useful to group runs that belong to the same optuna study
