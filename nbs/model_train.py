@@ -38,47 +38,18 @@ def train_on_dataset(model_type, dataset, config):
     lr_max = config.lr_max if config.lr_max is not None else learn.lr_find()
     
     # training 
+    print("MODEL SIZE: ", get_n_params(learn), "\n")
     learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
-    
-    # evaluation on datasets
-    if config.data.include:
-        name = f'learner_trained_on_{dataset}'
-    else:
-        dataset_to_train_on = config.data.dataset.copy()
-        dataset_to_train_on.remove(dataset)
-        name = f'learner_trained_on_{dataset_to_train_on}'
-        
-    eval_data = {}
-    eval_data[name] = {__:[] for __ in config.data.dataset}
-    
-    for ds_name in config.data.dataset:
-        X = np.load(Path(config.data.path + ds_name + '.npy').expanduser(), mmap_mode='c' 
-                    if config.mmap else None)
-
-        X_sw = np.lib.stride_tricks.sliding_window_view(X[:, :config.sel_steps], 
-                                       config.lookback + config.horizon, 
-                                       axis=1)[:,::config.stride,:]
-        samples_per_simulation = X_sw.shape[1]
-        X_sw = X_sw.transpose(0,1,4,2,3)
-        X_sw = X_sw.reshape(-1, *X_sw.shape[2:])
-
-        train_stats = (learn.dls.train.after_batch.mean, learn.dls.train.after_batch.std)
-        ds = DensityData(X_sw, lbk=config.lookback, h=config.horizon)
-        tl = TfmdLists(range(len(ds)), DensityTupleTransform(ds))
-        dl = TfmdDL(tl, bs=learn.dls.valid.bs, shuffle=False, num_workers=0, 
-                    after_batch=Normalize.from_stats(*train_stats))
-
-        inps, preds, targs = learn.get_preds(dl=dl, with_input=True)
-        valid_loss = learn.loss_func(preds, targs)
-
-        eval_data[name][ds_name] = valid_loss.item()
-        
-    return name, eval_data, learn
-
+    # learn.fit(config.n_epoch, 1e-1)
+    return learn
 
 def get_dataset(dataset, config):
-    data = np.load(Path(config.data.path + dataset + '.npy').expanduser(), 
+    if dataset == 'comb':
+        data = np.load(Path('~/mocat-ml/data/comb_am_rp.npy').expanduser(), 
                mmap_mode='c' if config.mmap else None)
+    else:
+        data = np.load(Path(config.data.path + dataset + '.npy').expanduser(), 
+                mmap_mode='c' if config.mmap else None)
 
     data = data[:, :config.sel_steps]
     data_sw = np.lib.stride_tricks.sliding_window_view(data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
@@ -87,23 +58,8 @@ def get_dataset(dataset, config):
     data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
     return data, data_sw
 
-
-
 def get_dataloader(dataset, config):
-    if config.data.include:
-        data, data_sw = get_dataset(dataset, config)
-        
-    else:
-        datasets_to_train = config.data.dataset.copy()
-        datasets_to_train.remove(dataset)
-        datasets = []
-        for ds in datasets_to_train:
-            if ds == dataset: pass
-            datasets.append(get_dataset(ds, config))
-
-        data = np.concatenate([i[0] for i in datasets])
-        data_sw = np.concatenate([i[1] for i in datasets])
-        
+    data, data_sw = get_dataset(dataset, config)
     print(data_sw.shape, data.shape)
     
     splits = RandomSplitter()(data)
@@ -122,6 +78,7 @@ def get_dataloader(dataset, config):
                         num_workers=config.num_workers)
     
     return dls, splits
+
 
 def plot_loss(recorder, skip_start=0, with_valid=True, log=False, show_epochs=False, ax=None):
     if not ax:
@@ -143,6 +100,15 @@ def plot_loss(recorder, skip_start=0, with_valid=True, log=False, show_epochs=Fa
     return ax
 
 
+def get_n_params(model):
+    pp=0
+    for p in list(model.parameters()):
+        nn=1
+        for s in list(p.size()):
+            nn = nn*s
+        pp += nn
+    return pp
+
 if __name__ == "__main__":
     
     # TODO - add wandb implementation and more architectures
@@ -151,16 +117,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "Checking how model generalizes")
 
     # Data settings 
-    parser.add_argument("--dataset", type = str, default = "1", help = "datasets to train on") #1 means on all datasets otherwise list the dataset like this 'x2x2, x5x5, x10x10'
+    parser.add_argument("--dataset", type = str, default = "x2x2", help = "dataset to train on")     
     parser.add_argument("--model", type = str, default = "convgru", help = "architecture to use")
-    parser.add_argument("--include", type = int, default = 1) # 1 - include, 0 -  exclude
     parser.add_argument("--horizon", type = int, default = 4)
     parser.add_argument("--lookback", type = int, default = 4)
     parser.add_argument("--stride", type = int, default = 8)
     parser.add_argument("--partial_loss", type = int, default = 0) #1 - True 0 - False
     parser.add_argument("--bs", type = int, default = 32)
-    parser.add_argument("--num_run", type = int, default = 5)
     parser.add_argument("--n_epoch", type = int, default = 20)
+    parser.add_argument("--sel_steps", type = int, default = None)
 
     # Set defaults 
     args = parser.parse_args()
@@ -168,45 +133,30 @@ if __name__ == "__main__":
     
     # Settings
     model_type = args.model
-    config_base = yaml2dict('./config/data-gen.yaml', attrdict=True)
-    config_base.convgru = yaml2dict(f'./config/{model_type}/{model_type}.yaml', attrdict=True)
+    config_base = yaml2dict('./config/base.yaml', attrdict=True)
+    config_base[model_type] = yaml2dict(f'./config/{model_type}/{model_type}.yaml', attrdict=True)
     config = AttrDict(config_base)
     
     config.partial_loss = [0] if args.partial_loss == 1 else None
-    config.data.include = True if args.include else False
-    config.data.to_run = 1 if args.dataset == '1' else args.dataset.split(',')
-    for key in ['horizon', 'lookback', 'stride', 'bs', 'num_run', 'n_epoch']:
+    for key in ['horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps']:
         config[key] = arg_dict[key]
-
-    to_run = config.data.dataset if config.data.to_run == 1 else config.data.to_run
 
     print("CONFIG \n", json.dumps(config, indent=4))
 
-    result_dict = {}
-    result_dict['model'] = model_type
-    result_dict['config'] = config
-    result_dict['result'] = {}
-    path = f"result/horizon_{config.horizon}_include_{config.data.include}_partial_{args.partial_loss}"
-    
-    for dataset in to_run:
-        for _ in range(config.num_run):
-            model_name, result, learn = train_on_dataset(model_type, dataset, config)
+    # Training
+    learn = train_on_dataset(model_type, args.dataset, config)
 
-            # Save plots to data_gen/plots  
-            path = f'data_gen/plots/{args.dataset}_include_{config.data.include}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/run_{_}'
-            if not os.path.exists(path):
-                os.makedirs(path)
+    # Loss plot
+    path = f'plots/{args.dataset}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/'
+    if not os.path.exists(path):
+        os.makedirs(path)
 
-            if model_name not in result_dict['result']:
-                result_dict['result'][model_name] = {i: [] for i in config.data.dataset}
-                
-            for key in result[model_name]:
-                result_dict['result'][model_name][key].append(result[model_name][key])
-                    
-            print(f"Finished run number {_} \nDataset: {dataset}")
-            
-    with open(f"{path}.json", "w") as outfile:
-        json.dump(result_dict, outfile)
-    
-    print("FINISHEDDD")
-            
+    for i in [0, 0.5, 0.75, 0.9]:
+        num_epochs_toshow = config.n_epoch - int(i*config.n_epoch)
+        fig, ax = plt.subplots()
+        skip_start = int(len(learn.recorder.losses) * i)
+        plot_loss(learn.recorder, skip_start=skip_start, ax=ax)
+        ax.set_title('learning curve full' if skip_start == 0 else f'learning curve last {num_epochs_toshow} epochs')
+        name = 'full' if i==0 else f'last {num_epochs_toshow} epochs'
+        plt.savefig(f'{path}{name}.png')
+        plt.show()
