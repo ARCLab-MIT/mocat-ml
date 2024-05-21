@@ -4,6 +4,7 @@ from fastai.vision.all import *
 from mocatml.utils import *
 convert_uuids_to_indices()
 from mocatml.data import *
+from mocatml.models.utils import *
 from mocatml.models.conv_rnn import *
 from mygrad import sliding_window_view
 from tsai.imports import my_setup
@@ -17,7 +18,7 @@ my_setup()
 def train_on_dataset(model_type, dataset, config):
     # only implemented for convgru (add more architectures)
     
-    dls, splits = get_dataloader(dataset, config)
+    dls, splits, X, X_sw = get_dataloader(dataset, config)
     
     if config.partial_loss is not None:
         loss_func = PartialStackLoss(config.partial_loss, loss_func=MSELossFlat())
@@ -41,6 +42,8 @@ def train_on_dataset(model_type, dataset, config):
     print("MODEL SIZE: ", get_n_params(learn), "\n")
     learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
     # learn.fit(config.n_epoch, 1e-1)
+    # learn.eval()
+    # plot_preds(learn, config, X, X_sw, dataset)
     return learn
 
 def get_dataset(dataset, config):
@@ -77,7 +80,7 @@ def get_dataloader(dataset, config):
                         config.normalize else None,
                         num_workers=config.num_workers)
     
-    return dls, splits
+    return dls, splits, data, data_sw
 
 
 def plot_loss(recorder, skip_start=0, with_valid=True, log=False, show_epochs=False, ax=None):
@@ -109,6 +112,37 @@ def get_n_params(model):
         pp += nn
     return pp
 
+
+def plot_preds(learn, config, X, X_sw, dataset_name):
+    train_stats = (learn.dls.train.after_batch.mean, learn.dls.train.after_batch.std)
+    ds = DensityData(X_sw, lbk=config.lookback, h=config.horizon)
+    tl = TfmdLists(range(len(ds)), DensityTupleTransform(ds))
+    dl = TfmdDL(tl, bs=learn.dls.valid.bs, shuffle=False, num_workers=0, 
+            after_batch=Normalize.from_stats(*train_stats))
+    inps, _, _ = learn.get_preds(dl=dl, with_input=True)
+
+    ds_full = DensityData(X, lbk=config.lookback, h=config.horizon)
+    tl_full = TfmdLists(range(len(ds_full)), DensityTupleTransform(ds_full))
+    dl_full = TfmdDL(tl_full, bs=learn.dls.valid.bs, shuffle=False, num_workers=0, 
+                after_batch=Normalize.from_stats(*train_stats))
+
+    xb,yb = dl_full.one_batch()
+
+    n_iter = X.shape[1]//config.horizon - 1
+    n_iter_half = n_iter//2
+
+    preds,targs,losses = learn.get_preds_iterative(dl=dl_full, n_iter=n_iter, track_losses=True)
+    save_path = f"plots/{dataset_name}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/"
+
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    learn.show_preds_at(0, p=preds, t=targs, inp=inps, save=True, save_path = save_path, with_targets=True, 
+                    with_input=True, start_epoch=(n_iter-1)*config.horizon,
+                   titles=["Input", "100 year-ahead predictions with non-overlapping model", 
+                           "100 year-ahead targets"])
+
+                        
 if __name__ == "__main__":
     
     # TODO - add wandb implementation and more architectures
@@ -146,6 +180,7 @@ if __name__ == "__main__":
     # Training
     learn = train_on_dataset(model_type, args.dataset, config)
 
+    
     # Loss plot
     path = f'plots/{args.dataset}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/'
     if not os.path.exists(path):
