@@ -17,7 +17,6 @@ my_setup()
 
 def train_on_dataset(model_type, dataset, config):
     # only implemented for convgru (add more architectures)
-    
     dls, splits, X, X_sw = get_dataloader(dataset, config)
     
     if config.partial_loss is not None:
