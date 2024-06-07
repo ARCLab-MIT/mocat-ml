@@ -11,57 +11,12 @@ from tsai.imports import my_setup
 from tsai.utils import yaml2dict, dict2attrdict
 from fastai.callback.schedule import valley, steep
 from fastai.callback.wandb import WandbCallback
-import wandb, json, argparse, os, h5py, time, datetime
+import wandb, json, argparse, os, h5py, time, datetime, torch
 import numpy as np
 
+from loss_functions import *
+
 my_setup()
-
-def get_loss_func_and_metrics(config):
-    if config.partial_loss is not None:
-        if config['loss'] == 'mse':
-            loss_func = PartialStackLoss(config.partial_loss, loss_func=MSELossFlat())
-        if config['loss'] == 'mae':
-            loss_func = PartialStackLoss(config.partial_loss, loss_func=L1LossFlat())
-        if config['loss'] == 'huber':
-            loss_func = PartialStackLoss(config.partial_loss, loss_func=nn.HuberLoss())
-        if config['loss'] == 'mbd':
-            loss_func = PartialStackLoss(config.partial_loss, loss_func=MBDLoss())
-
-        full_loss = StackLoss()
-        full_loss.__name__ = "full_loss"
-        metrics = [full_loss] 
-
-    else:
-        if config['loss'] == 'mse':
-            loss_func = StackLoss(MSELossFlat())
-        if config['loss'] == 'mae':
-            loss_func = StackLoss(L1LossFlat())
-        if config['loss'] == 'huber':
-            loss_func = StackLoss(nn.HuberLoss())
-        if config['loss'] == 'mbd':
-            loss_func =  StackLoss(MBDLoss())
-        metrics = []
-
-    return loss_func, metrics
-
-
-class MBDLoss(nn.Module):
-    def __init__(self):
-        super(MBDLoss, self).__init__()
-        self.mse = nn.MSELoss()  # Mean squared error loss
-        self.mae = nn.L1Loss()   # Mean absolute error loss
-
-    def forward(self, y_pred, y_true):
-        # Calculate MSE and MAE components
-        mse_loss = self.mse(y_pred, y_true)
-        mae_loss = self.mae(y_pred, y_true)
-
-        # Combine MSE and MAE with a weighting factor (alpha)
-        alpha = 0.5  # Adjust alpha as needed (0 for pure MAE, 1 for pure MSE)
-        mbd_loss = (1 - alpha) * mse_loss + alpha * mae_loss
-
-        return mbd_loss
-
 
 def train_on_dataset(model_type, ds_name, config):
     # only implemented for convgru (add more architectures)
@@ -81,13 +36,12 @@ def train_on_dataset(model_type, ds_name, config):
     print("MODEL SIZE: ", get_n_params(learn), "\n")
 
     learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
-    # learn.fit(config.n_epoch, 3e-3)
-    # learn.eval()
 
-    save_folder = f"plots/{config['loss']}/{ds_name}/"
+    save_folder = f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/" if config['loss'] != 'mbd' else f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/alpha_{config['alpha']}/"
     plot_preds(learn, config, X, X_sw, save_folder)
 
     return learn
+
 
 def get_dataset(ds_name, config):
     path = f'/mnt/data/sumiya/mocat-ml/data/TLE_density_all_{ds_name}.mat'
@@ -96,6 +50,7 @@ def get_dataset(ds_name, config):
     data_sw = data_sw.transpose(0,1,4,2,3)
     data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
     return data, data_sw
+
 
 
 def get_dataloader(dataset, config):
@@ -120,6 +75,7 @@ def get_dataloader(dataset, config):
     return dls, splits, data, data_sw
     
 
+
 def plot_loss(recorder, skip_start=0, with_valid=True, log=False, show_epochs=False, ax=None):
     if not ax:
         ax=plt.gca()
@@ -139,6 +95,7 @@ def plot_loss(recorder, skip_start=0, with_valid=True, log=False, show_epochs=Fa
         ax.legend()
     return ax
 
+
 def downsample_matrix(matrix):
     row_sample_ratio = matrix.shape[0] / 36
     col_sample_ratio = matrix.shape[1] / 36
@@ -146,6 +103,8 @@ def downsample_matrix(matrix):
     row_indices = np.linspace(0, matrix.shape[0] - 1, int(np.ceil(matrix.shape[0] / row_sample_ratio))).astype(int)
     col_indices = np.linspace(0, matrix.shape[1] - 1, int(np.ceil(matrix.shape[1] / col_sample_ratio))).astype(int)
     return matrix[row_indices[:, np.newaxis], col_indices]
+
+
 
 def get_n_params(model):
     pp=0
@@ -205,7 +164,6 @@ if __name__ == "__main__":
     parser.add_argument("--sel_steps", type = int, default = None)
     parser.add_argument("--key", type = str, default = 'comb_Am_rp')
     parser.add_argument("--loss", type = str, default = 'mse')
-    parser.add_argument("--runs", type = int, default = 5)
 
     # Set defaults 
     args = parser.parse_args()
@@ -218,8 +176,11 @@ if __name__ == "__main__":
     config = AttrDict(config_base)
     
     config.partial_loss = [0] if args.partial_loss == 1 else None
-    for key in ['horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss', 'runs']:
+    for key in ['horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss']:
         config[key] = arg_dict[key]
+
+    if config['loss'] == 'mbd':
+        config['alpha'] = 0.5 #set alpha here
 
     print("CONFIG \n", json.dumps(config, indent=4))
 
