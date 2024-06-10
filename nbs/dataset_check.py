@@ -9,6 +9,7 @@ for i in range(15, 14, -1):
     for j in range(15, 14, -1):
         if i+j==0: continue
         
+
         path = "/home/gridsan/ssarangerel/orbitalrisk_MC/supercloud_runs/corrupted_combined_ds/"
         ds_name = f'x{i}x{j}'
 
