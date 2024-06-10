@@ -11,22 +11,17 @@ from tsai.imports import my_setup
 from tsai.utils import yaml2dict, dict2attrdict
 from fastai.callback.schedule import valley, steep
 from fastai.callback.wandb import WandbCallback
-import wandb, json, argparse, os
+import wandb, json, argparse, os, h5py, time, datetime, torch
+import numpy as np
+
+from loss_functions import *
 
 my_setup()
 
-def train_on_dataset(model_type, dataset, config):
+def train_on_dataset(model_type, ds_name, config):
     # only implemented for convgru (add more architectures)
-    dls, splits, X, X_sw = get_dataloader(dataset, config)
-    
-    if config.partial_loss is not None:
-        loss_func = PartialStackLoss(config.partial_loss, loss_func=MSELossFlat())
-        full_loss = StackLoss()
-        full_loss.__name__ = "full_loss"
-        metrics = [full_loss] # [StackLoss()]
-    else:
-        loss_func = StackLoss(MSELossFlat())
-        metrics = []
+    dls, splits, X, X_sw = get_dataloader(ds_name, config)
+    loss_func, metrics = get_loss_func_and_metrics(config)
 
     # model setup
     config.convgru.norm = NormType.Batch if config.convgru.norm == 'batch' else None
@@ -39,26 +34,24 @@ def train_on_dataset(model_type, dataset, config):
     
     # training 
     print("MODEL SIZE: ", get_n_params(learn), "\n")
+
     learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
-    # learn.fit(config.n_epoch, 1e-1)
-    # learn.eval()
-    # plot_preds(learn, config, X, X_sw, dataset)
+
+    save_folder = f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/" if config['loss'] != 'mbd' else f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/alpha_{config['alpha']}/"
+    plot_preds(learn, config, X, X_sw, save_folder)
+
     return learn
 
-def get_dataset(dataset, config):
-    if dataset == 'comb':
-        data = np.load(Path('~/mocat-ml/data/comb_am_rp.npy').expanduser(), 
-               mmap_mode='c' if config.mmap else None)
-    else:
-        data = np.load(Path(config.data.path + dataset + '.npy').expanduser(), 
-                mmap_mode='c' if config.mmap else None)
 
-    data = data[:, :config.sel_steps]
+def get_dataset(ds_name, config):
+    path = f'/mnt/data/sumiya/mocat-ml/data/TLE_density_all_{ds_name}.mat'
+    data = np.array(h5py.File(path, 'r')[config["key"]])[:, :config.sel_steps]
     data_sw = np.lib.stride_tricks.sliding_window_view(data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
-    samples_per_simulation = data_sw.shape[1]
     data_sw = data_sw.transpose(0,1,4,2,3)
     data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
     return data, data_sw
+
+
 
 def get_dataloader(dataset, config):
     data, data_sw = get_dataset(dataset, config)
@@ -80,6 +73,7 @@ def get_dataloader(dataset, config):
                         num_workers=config.num_workers)
     
     return dls, splits, data, data_sw
+    
 
 
 def plot_loss(recorder, skip_start=0, with_valid=True, log=False, show_epochs=False, ax=None):
@@ -102,6 +96,16 @@ def plot_loss(recorder, skip_start=0, with_valid=True, log=False, show_epochs=Fa
     return ax
 
 
+def downsample_matrix(matrix):
+    row_sample_ratio = matrix.shape[0] / 36
+    col_sample_ratio = matrix.shape[1] / 36
+
+    row_indices = np.linspace(0, matrix.shape[0] - 1, int(np.ceil(matrix.shape[0] / row_sample_ratio))).astype(int)
+    col_indices = np.linspace(0, matrix.shape[1] - 1, int(np.ceil(matrix.shape[1] / col_sample_ratio))).astype(int)
+    return matrix[row_indices[:, np.newaxis], col_indices]
+
+
+
 def get_n_params(model):
     pp=0
     for p in list(model.parameters()):
@@ -112,7 +116,7 @@ def get_n_params(model):
     return pp
 
 
-def plot_preds(learn, config, X, X_sw, dataset_name):
+def plot_preds(learn, config, X, X_sw, save_folder):
     train_stats = (learn.dls.train.after_batch.mean, learn.dls.train.after_batch.std)
     ds = DensityData(X_sw, lbk=config.lookback, h=config.horizon)
     tl = TfmdLists(range(len(ds)), DensityTupleTransform(ds))
@@ -131,12 +135,11 @@ def plot_preds(learn, config, X, X_sw, dataset_name):
     n_iter_half = n_iter//2
 
     preds,targs,losses = learn.get_preds_iterative(dl=dl_full, n_iter=n_iter, track_losses=True)
-    save_path = f"plots/{dataset_name}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/"
 
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
 
-    learn.show_preds_at(0, p=preds, t=targs, inp=inps, save=True, save_path = save_path, with_targets=True, 
+    learn.show_preds_at(0, p=preds, t=targs, inp=inps, save=True, save_path = save_folder, with_targets=True, 
                     with_input=True, start_epoch=(n_iter-1)*config.horizon,
                    titles=["Input", "100 year-ahead predictions with non-overlapping model", 
                            "100 year-ahead targets"])
@@ -150,7 +153,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "Checking how model generalizes")
 
     # Data settings 
-    parser.add_argument("--dataset", type = str, default = "x2x2", help = "dataset to train on")     
+    parser.add_argument("--dataset", type = str, default = "x8x8", help = "dataset to train on")     
     parser.add_argument("--model", type = str, default = "convgru", help = "architecture to use")
     parser.add_argument("--horizon", type = int, default = 4)
     parser.add_argument("--lookback", type = int, default = 4)
@@ -159,6 +162,8 @@ if __name__ == "__main__":
     parser.add_argument("--bs", type = int, default = 32)
     parser.add_argument("--n_epoch", type = int, default = 20)
     parser.add_argument("--sel_steps", type = int, default = None)
+    parser.add_argument("--key", type = str, default = 'comb_Am_rp')
+    parser.add_argument("--loss", type = str, default = 'mse')
 
     # Set defaults 
     args = parser.parse_args()
@@ -171,26 +176,29 @@ if __name__ == "__main__":
     config = AttrDict(config_base)
     
     config.partial_loss = [0] if args.partial_loss == 1 else None
-    for key in ['horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps']:
+    for key in ['horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss']:
         config[key] = arg_dict[key]
+
+    if config['loss'] == 'mbd':
+        config['alpha'] = 0.5 #set alpha here
 
     print("CONFIG \n", json.dumps(config, indent=4))
 
     # Training
     learn = train_on_dataset(model_type, args.dataset, config)
 
-    
-    # Loss plot
-    path = f'plots/{args.dataset}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/'
-    if not os.path.exists(path):
-        os.makedirs(path)
 
-    for i in [0, 0.5, 0.75, 0.9]:
-        num_epochs_toshow = config.n_epoch - int(i*config.n_epoch)
-        fig, ax = plt.subplots()
-        skip_start = int(len(learn.recorder.losses) * i)
-        plot_loss(learn.recorder, skip_start=skip_start, ax=ax)
-        ax.set_title('learning curve full' if skip_start == 0 else f'learning curve last {num_epochs_toshow} epochs')
-        name = 'full' if i==0 else f'last {num_epochs_toshow} epochs'
-        plt.savefig(f'{path}{name}.png')
-        plt.show()
+    # Loss plot
+    # path = f'plots/{args.dataset}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/'
+    # if not os.path.exists(path):
+    #     os.makedirs(path)
+
+    # for i in [0, 0.5, 0.75, 0.9]:
+    #     num_epochs_toshow = config.n_epoch - int(i*config.n_epoch)
+    #     fig, ax = plt.subplots()
+    #     skip_start = int(len(learn.recorder.losses) * i)
+    #     plot_loss(learn.recorder, skip_start=skip_start, ax=ax)
+    #     ax.set_title('learning curve full' if skip_start == 0 else f'learning curve last {num_epochs_toshow} epochs')
+    #     name = 'full' if i==0 else f'last {num_epochs_toshow} epochs'
+    #     plt.savefig(f'{path}{name}.png')
+    #     plt.show()
