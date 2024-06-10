@@ -104,18 +104,12 @@ class DensityData:
         seq = self.data[idx]  # Shape: (lbk+gap+h, height, width)
         input = seq[:self.lbk]
         output = seq[self.lbk+self.gap:self.lbk+self.gap+self.h]
-
-        if len(input.shape) > 3 and len(output.shape) > 3:
-            input_tensor = torch.from_numpy(input).float()              # Add channel dimension
-            output_tensor = torch.from_numpy(output).float()[:, 0, :, :]  # Add channel dimension
-        else:
-            input_tensor = torch.from_numpy(input).float().unsqueeze(1)  # Add channel dimension
-            output_tensor = torch.from_numpy(output).float().unsqueeze(1)  # Add channel dimension
+        
+        input_tensor = torch.from_numpy(input).float().unsqueeze(1)  # Add channel dimension
+        output_tensor = torch.from_numpy(output).float().unsqueeze(1)  # Add channel dimension
 
         return input_tensor, output_tensor
-
-        # return torch.from_numpy(input).float(), torch.from_numpy(output).float()
-
+    
     def __len__(self):
         return len(self.data)
 

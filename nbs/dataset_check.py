@@ -11,9 +11,7 @@ for i in range(15, 14, -1):
         
         path = "/home/gridsan/ssarangerel/orbitalrisk_MC/supercloud_runs/corrupted_combined_ds/"
         ds_name = f'x{i}x{j}'
-
-        print(ds_name)
-
+        
         data = np.array(h5py.File(f'{path}{ds_name}/TLE_density_all.mat', 'r')['comb_Am_rp'])
         corruption = []
         for i, sim in enumerate(data):

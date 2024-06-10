@@ -2,7 +2,7 @@ project:
   output-dir: _docs
 
 website:
-  title: "orbitalrisk_ML"
+  title: "mocatml"
   site-url: "https://arclab.github.io/orbitalrisk_ML"
   description: "ML experiments for orbital risk/capacity calculation and validation"
   repo-branch: main
