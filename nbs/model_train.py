@@ -155,9 +155,9 @@ if __name__ == "__main__":
     # Data settings 
     parser.add_argument("--dataset", type = str, default = "x8x8", help = "dataset to train on")     
     parser.add_argument("--model", type = str, default = "convgru", help = "architecture to use")
-    parser.add_argument("--horizon", type = int, default = 4)
-    parser.add_argument("--lookback", type = int, default = 4)
-    parser.add_argument("--stride", type = int, default = 8)
+    parser.add_argument("--horizon", type = int, default = 4) 
+    parser.add_argument("--lookback", type = int, default = 4) 
+    parser.add_argument("--stride", type = int, default = 8) 
     parser.add_argument("--partial_loss", type = int, default = 0) #1 - True 0 - False
     parser.add_argument("--bs", type = int, default = 32)
     parser.add_argument("--n_epoch", type = int, default = 20)
