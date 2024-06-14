@@ -338,6 +338,7 @@ class SimpleModel(Module):
         self.decoder = Decoder(n_out, szs[::-1], ks, rnn_ks, act, blur, attn, norm, debug)
     def forward(self, x):
         enc_outs, h = self.encoder(x)
+
         if self.strategy == 'zero':
             dec_in = one_param(self).new_zeros(*enc_outs[-1].shape)
         elif self.strategy == 'encoder':
@@ -353,6 +354,7 @@ class SimpleModel(Module):
 #     return _inner_loss
 
 # %% ../../nbs_lib/models.conv_rnn.ipynb 45
+
 class StackLoss(nn.Module):
     def __init__(self, loss_func=MSELossFlat(), axis=-1):
         super().__init__()

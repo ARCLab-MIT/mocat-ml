@@ -101,12 +101,18 @@ class DensityData:
         """
         Returns a single sample from the dataset, split into input and output sequences.
         """
+        # (4, 2, 36, 99) (4, 2, 36, 99)
+        # torch.Size([4, 1, 2, 36, 99]) torch.Size([4, 1, 2, 36, 99])
         seq = self.data[idx]  # Shape: (lbk+gap+h, height, width)
         input = seq[:self.lbk]
         output = seq[self.lbk+self.gap:self.lbk+self.gap+self.h]
-        
-        input_tensor = torch.from_numpy(input).float().unsqueeze(1)  # Add channel dimension
-        output_tensor = torch.from_numpy(output).float().unsqueeze(1)  # Add channel dimension
+
+        if len(input.shape) > 3 and len(output.shape) > 3:
+            input_tensor = torch.from_numpy(input).float()  # Add channel dimension
+            output_tensor = torch.from_numpy(output).float()[:, 0, :, :]  # Add channel dimension
+        else:
+            input_tensor = torch.from_numpy(input).float().unsqueeze(1)  # Add channel dimension
+            output_tensor = torch.from_numpy(output).float().unsqueeze(1)  # Add channel dimension
 
         return input_tensor, output_tensor
 
