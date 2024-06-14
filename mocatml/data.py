@@ -115,9 +115,7 @@ class DensityData:
             output_tensor = torch.from_numpy(output).float().unsqueeze(1)  # Add channel dimension
 
         return input_tensor, output_tensor
-
-        # return torch.from_numpy(input).float(), torch.from_numpy(output).float()
-
+    
     def __len__(self):
         return len(self.data)
 

@@ -27,7 +27,7 @@ def print_ds(ds_name):
             print(key, type(data[key]))
         pass
 
-def count_nonzeros_over_time(data, stride=8):
+def count_nonzeros_over_time(data, stride):
     num_timesteps = data.shape[0]
     zeros_per_timestep = []
     for t in range(0, num_timesteps, stride):
@@ -35,9 +35,11 @@ def count_nonzeros_over_time(data, stride=8):
     return zeros_per_timestep
 
 
-def plot_nonzeros(ds_name, key, data):
+def plot_nonzeros(ds_name, key, data, stride=8):
     plt.figure(figsize=(8, 6))
-    plt.plot(range(data.shape[0]), count_nonzeros_over_time(data))
+    count = count_nonzeros_over_time(data, stride)
+    print(len(count))
+    plt.plot(np.linspace(0, data.shape[0], len(count)), count)
     plt.xlabel("Timestep")
     plt.ylabel("Number of Non-Zeros")
     plt.title("Number of Non-Zeros Over Time")
@@ -48,8 +50,7 @@ def plot_nonzeros(ds_name, key, data):
         
     plt.savefig(f"plots_eda/{key}/{ds_name}_{key}_num_of_nonzeros")
     plt.show()
-    
-
+    plt.close()
 
 if __name__ == "__main__":
 

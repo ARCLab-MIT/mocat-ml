@@ -172,19 +172,12 @@ if __name__ == "__main__":
 
     # Data settings 
     parser.add_argument("--dataset", type = str, default = "x2x2", help = "datasets to train on") #1 means on all datasets otherwise list the dataset like this 'x2x2, x5x5, x10x10'
-    
     parser.add_argument("--n_epoch", type = int, default = 20)
-    
     parser.add_argument("--split", type = float, default = 0.95)
-    
     parser.add_argument("--bs", type = int, default = 512)
-    
     parser.add_argument("--enc_dim", type = int, default = 128, help = "latent vector size")
-
     parser.add_argument("--stride", type = int, default = 8)
-
     parser.add_argument("--horizon", type = int, default = 0)
-
     parser.add_argument("--act_func", type = int, default = 0)
 
     # Set defaults 
