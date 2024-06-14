@@ -117,3 +117,6 @@ def show_preds_at(self:Learner, idx, p=None, t=None, inp=None, with_input=None,
         t_seq = DensitySeq.create([t[i][idx] for i in range(len(t))])
         t_seq.show(start_epoch=start_epoch+len(p), title=titles[2], 
                    x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
+
+
+    

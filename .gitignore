@@ -18,6 +18,9 @@ nbs/resnet
 plots
 training_plots
 draft_nbs
+gifs
+nbs/mocat-ml.code-workspace
+.gitignore
 
 # Ignore the content of the folders starting with Trash-
 .Trash-*/
