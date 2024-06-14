@@ -18,6 +18,7 @@ from loss_functions import *
 
 my_setup()
 
+
 def train_on_dataset(model_type, ds_name, config):
     # only implemented for convgru (add more architectures)
     dls, splits, X, X_sw = get_dataloader(ds_name, config)

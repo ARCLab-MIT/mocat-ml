@@ -2,6 +2,21 @@ import h5py, os
 import numpy as np
 import matplotlib.pyplot as plt
 
+import sys
+sys.path.append('..')
+from fastai.vision.all import *
+from mocatml.utils import *
+convert_uuids_to_indices()
+from mocatml.data import *
+from mocatml.models.utils import *
+from mocatml.models.conv_rnn import *
+from mygrad import sliding_window_view
+from tsai.imports import my_setup
+from tsai.utils import yaml2dict, dict2attrdict
+from fastai.callback.schedule import valley, steep
+from fastai.callback.wandb import WandbCallback
+import wandb, json, argparse, os, h5py
+
 def print_ds(ds_name):
     path = f"/home/gridsan/ssarangerel/orbitalrisk_MC/supercloud_runs/combined_ds_mocatml/{ds_name}/TLE_density_all.mat"
     data = h5py.File(path, 'r')
@@ -29,13 +44,17 @@ def plot_nonzeros(ds_name, key, data, stride=8):
     plt.ylabel("Number of Non-Zeros")
     plt.title("Number of Non-Zeros Over Time")
     plt.grid(True)
-    plt.savefig(f"{ds_name}_{key}_num_of_nonzeros")
+    path = f'plots_eda/{key}'
+    if not os.path.exists(path):
+        os.makedirs(path)
+        
+    plt.savefig(f"plots_eda/{key}/{ds_name}_{key}_num_of_nonzeros")
     plt.show()
     plt.close()
 
-
 if __name__ == "__main__":
 
+<<<<<<< HEAD
     keys = ["comb_Am_inc", "comb_Am_ra", "comb_Am_rp", "comb_inc_ra", "comb_inc_rp", "comb_ra_rp"]
     for xPop in range(5, 4, -1):
         for xLaunch in range(15, 14, -1):
@@ -55,3 +74,16 @@ if __name__ == "__main__":
                 plot_nonzeros(ds_name, key, data[30], 1)
 
             # print(f"Done x{xPop}x{xLaunch}")
+=======
+    model_type = 'convgru'
+    config_base = yaml2dict('./config/base.yaml', attrdict=True)
+    config_base[model_type] = yaml2dict(f'./config/{model_type}/{model_type}.yaml', attrdict=True)
+    config = AttrDict(config_base)
+
+
+    data = np.load(Path('~/mocat-ml/data/TLE_density_all_x15x15.npy').expanduser(), 
+               mmap_mode='c' if config.mmap else None)  
+
+    data = data[0]
+    print(data.shape)
+>>>>>>> 09249b18fdbb61ab372693f6b4e3e1c104f6a300
