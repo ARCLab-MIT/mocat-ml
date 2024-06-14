@@ -54,23 +54,11 @@ def plot_nonzeros(ds_name, key, data, stride=8):
 
 if __name__ == "__main__":
 
-    # keys = ["comb_Am_inc", "comb_Am_ra", "comb_Am_rp", "comb_inc_ra", "comb_inc_rp", "comb_ra_rp"]
-    # for xPop in range(16):
-    #     for xLaunch in range(16):
-    #         for key in keys:
-    #             if xPop + xLaunch == 0: continue
-
-    #             ds_name = f'x{xPop}x{xLaunch}'
-    #             print_ds(ds_name)
-    #             a=a
-    #             path = f"/home/gridsan/ssarangerel/orbitalrisk_MC/supercloud_runs/combined_ds_mocatml/{ds_name}/TLE_density_all.mat"
-    #             data = np.array(h5py.File(path, 'r')[key])
-    #             plot_nonzeros(ds_name, key, data[0])
-
     model_type = 'convgru'
     config_base = yaml2dict('./config/base.yaml', attrdict=True)
     config_base[model_type] = yaml2dict(f'./config/{model_type}/{model_type}.yaml', attrdict=True)
     config = AttrDict(config_base)
+
 
     data = np.load(Path('~/mocat-ml/data/TLE_density_all_x15x15.npy').expanduser(), 
                mmap_mode='c' if config.mmap else None)  

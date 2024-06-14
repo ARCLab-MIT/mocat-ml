@@ -4,7 +4,8 @@
 __all__ = ['convert_uuids_to_indices', 'percent_rel_error_', 'calculate_sample_idxs']
 
 # %% ../nbs_lib/utils.ipynb 2
-import os, re
+import os
+import re
 import numpy as np
 from fastcore.all import *
 
@@ -40,4 +41,3 @@ def calculate_sample_idxs(simulation_idxs, samples_per_sim):
         end_idx = start_idx + samples_per_sim
         indices.extend(range(start_idx, end_idx))
     return indices
-
