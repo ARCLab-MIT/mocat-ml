@@ -145,8 +145,6 @@ def plot_preds(learn, config, X, X_sw, save_folder):
                            "100 year-ahead targets"])
 
 def plot_loss():
-
-    
     pass                        
 
 if __name__ == "__main__":
