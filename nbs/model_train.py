@@ -143,9 +143,7 @@ def plot_preds(learn, config, X, X_sw, save_folder):
                     with_input=True, start_epoch=(n_iter-1)*config.horizon,
                    titles=["Input", "100 year-ahead predictions with non-overlapping model", 
                            "100 year-ahead targets"])
-
-def plot_loss():
-    pass                        
+             
 
 if __name__ == "__main__":
     
