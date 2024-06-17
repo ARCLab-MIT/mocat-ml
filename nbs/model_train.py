@@ -144,7 +144,9 @@ def plot_preds(learn, config, X, X_sw, save_folder):
                    titles=["Input", "100 year-ahead predictions with non-overlapping model", 
                            "100 year-ahead targets"])
 
-                        
+def plot_loss():
+    pass                        
+
 if __name__ == "__main__":
     
     # TODO - add wandb implementation and more architectures
@@ -186,7 +188,6 @@ if __name__ == "__main__":
 
     # Training
     learn = train_on_dataset(model_type, args.dataset, config)
-
 
     # Loss plot
     # path = f'plots/{args.dataset}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/'
