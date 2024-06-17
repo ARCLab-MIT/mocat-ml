@@ -58,17 +58,20 @@ def get_dataloader(dataset, config):
     data, data_sw = get_dataset(dataset, config)
     print(data_sw.shape, data.shape)
     
-    splits = RandomSplitter()(data)
+    splits = RandomSplitter()(data) #valid_pct=0.2,
     ds = DensityData(data_sw, lbk=config.lookback, h=config.horizon, gap=config.gap)
-    samples_per_simulation = data_sw.shape[1]
+    samples_per_simulation = data_sw.shape[0]//(data.shape[0])
     train_idxs = calculate_sample_idxs(splits[0], samples_per_simulation)
     valid_idxs = calculate_sample_idxs(splits[1], samples_per_simulation)
+
+    print(len(train_idxs), len(valid_idxs))
 
     mocat_stats = (np.mean(data[splits[0]]), np.std(data[splits[0]]))
 
     train_tl = TfmdLists(train_idxs, DensityTupleTransform(ds))
     valid_tl = TfmdLists(valid_idxs, DensityTupleTransform(ds))
-    dls = DataLoaders.from_dsets(train_tl, valid_tl, bs=config.bs, device=default_device(),
+    
+    dls = DataLoaders.from_dsets(train_tl, valid_tl, bs=config['bs'], device=default_device(),
                         after_batch=[Normalize.from_stats(*mocat_stats)] if \
                         config.normalize else None,
                         num_workers=config.num_workers)
@@ -119,26 +122,22 @@ def get_n_params(model):
 
 def plot_preds(learn, config, X, X_sw, save_folder):
     train_stats = (learn.dls.train.after_batch.mean, learn.dls.train.after_batch.std)
-    ds = DensityData(X_sw, lbk=config.lookback, h=config.horizon)
-    tl = TfmdLists(range(len(ds)), DensityTupleTransform(ds))
-    dl = TfmdDL(tl, bs=learn.dls.valid.bs, shuffle=False, num_workers=0, 
-            after_batch=Normalize.from_stats(*train_stats))
-    inps, _, _ = learn.get_preds(dl=dl, with_input=True)
-
     ds_full = DensityData(X, lbk=config.lookback, h=config.horizon)
     tl_full = TfmdLists(range(len(ds_full)), DensityTupleTransform(ds_full))
     dl_full = TfmdDL(tl_full, bs=learn.dls.valid.bs, shuffle=False, num_workers=0, 
                 after_batch=Normalize.from_stats(*train_stats))
 
-    xb,yb = dl_full.one_batch()
-
     n_iter = X.shape[1]//config.horizon - 1
-    n_iter_half = n_iter//2
-
-    preds,targs,losses = learn.get_preds_iterative(dl=dl_full, n_iter=n_iter, track_losses=True)
+    inps, preds, targs, losses = learn.get_preds_iterative(dl=dl_full, n_iter=n_iter, track_losses=True, with_input=True)
 
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
+
+    plt.clf()
+    plt.plot(np.linspace(0, 100, losses.shape[0]), losses)
+    plt.xlabel("Years")
+    plt.ylabel(f"Loss ({config['loss']})")
+    plt.savefig(f"{save_folder}/loss-100-years.jpg")
 
     learn.show_preds_at(0, p=preds, t=targs, inp=inps, save=True, save_path = save_folder, with_targets=True, 
                     with_input=True, start_epoch=(n_iter-1)*config.horizon,
