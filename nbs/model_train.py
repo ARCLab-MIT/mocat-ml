@@ -145,10 +145,7 @@ def plot_preds(learn, config, X, X_sw, save_folder):
                            "100 year-ahead targets"])
              
 
-if __name__ == "__main__":
-    
-    # TODO - add wandb implementation and more architectures
-
+if __name__ == "__main__":    
     # Parser
     parser = argparse.ArgumentParser(description = "Checking how model generalizes")
 
