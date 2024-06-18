@@ -9,6 +9,7 @@ from ..data import *
 from fastcore.all import *
 from fastai.vision.all import *
 from copy import copy
+import matplotlib.pyplot as plt
 
 # %% ../../nbs_lib/models.utils.ipynb 4
 def stack_density_list_as_preds_targs(l):
@@ -97,7 +98,7 @@ def predict_at(self:Learner, idx, ds_idx=1, ds=None, with_input=False):
 @patch
 @delegates(DensitySeq.show, but=["title", "start_epoch"])
 def show_preds_at(self:Learner, idx, p=None, t=None, inp=None, with_input=None, 
-                  with_targets=False, save = False, save_path = "", titles=["Input", "Prediction", "Target"],
+                  with_targets=False, save=False, save_path = "", titles=["Input", "Prediction", "Target"],
                   start_epoch=0, **kwargs):
     """
         Show predictions at a given index
@@ -107,20 +108,18 @@ def show_preds_at(self:Learner, idx, p=None, t=None, inp=None, with_input=None,
     if p is None:
         inp, p, t = self.predict_at(idx, with_input=True, **kwargs)
         idx = 0
-
     if with_input:
         i_seq = DensitySeq.create([inp[i][idx] for i in range(len(inp))])
         i_seq.show(title=titles[0], x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
-        if save: plt.savefig(save_path + "input.png")
-
+        if save: plt.savefig(save_path+titles[0])
     p_seq = DensitySeq.create([p[i][idx] for i in range(len(p))])
     p_seq.show(start_epoch=start_epoch+len(p), title=titles[1], 
                x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
-               
-    if save: plt.savefig(save_path + "prediction.png")
+    if save: plt.savefig(save_path+titles[1])
+
     if with_targets:
         t_seq = DensitySeq.create([t[i][idx] for i in range(len(t))])
         t_seq.show(start_epoch=start_epoch+len(p), title=titles[2], 
                    x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
+        if save: plt.savefig(save_path+titles[2])
 
-    if save: plt.savefig(save_path + "target.png")
