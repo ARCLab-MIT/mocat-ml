@@ -16,7 +16,7 @@ from utils import *
 my_setup()
 
 
-def train_on_dataset(model_type, ds_name, config):
+def train_on_dataset(ds_name, config):
     # only implemented for convgru (add more architectures)
     dls, splits, X, X_sw = get_dataloader(ds_name, config)
     loss_func, metrics = get_loss_func_and_metrics(config)
@@ -33,8 +33,8 @@ def train_on_dataset(model_type, ds_name, config):
     # training 
     print("MODEL SIZE: ", get_n_params(learn), "\n")
 
-    # learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
-    learn.fit(config.n_epoch, 1e-3)
+    learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
+    # learn.fit(config.n_epoch, 1e-3)
 
     save_folder = f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/" if config['loss'] != 'mbd' else f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/alpha_{config['alpha']}/"
     plot_preds(learn, config, X, X_sw, save_folder)
@@ -59,6 +59,7 @@ if __name__ == "__main__":
     parser.add_argument("--sel_steps", type = int, default = None)
     parser.add_argument("--key", type = str, default = 'comb_Am_rp')
     parser.add_argument("--loss", type = str, default = 'mse')
+    parser.add_argument("--downsample", type = int, defualt = 0)
 
     # Set defaults 
     args = parser.parse_args()
@@ -71,7 +72,7 @@ if __name__ == "__main__":
     config = AttrDict(config_base)
     
     config.partial_loss = [0] if args.partial_loss == 1 else None
-    for key in ['horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss']:
+    for key in ['horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss', 'downsample']:
         config[key] = arg_dict[key]
 
     if config['loss'] == 'mbd':
@@ -79,8 +80,12 @@ if __name__ == "__main__":
 
     print("CONFIG \n", json.dumps(config, indent=4))
 
+    if config['downsample'] == 1:
+        config_base['convgru']['n_in'] = 6
+        config_base['convgru']['n_out'] = 6
+
     # Training
-    learn = train_on_dataset(model_type, args.dataset, config)
+    learn = train_on_dataset(args.dataset, config)
 
     # Loss plot
     # path = f'plots/{args.dataset}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/'
