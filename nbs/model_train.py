@@ -36,7 +36,8 @@ def train_on_dataset(model_type, ds_name, config):
     # training 
     print("MODEL SIZE: ", get_n_params(learn), "\n")
 
-    learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
+    # learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
+    learn.fit(config.n_epoch, 1e-3)
 
     save_folder = f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/" if config['loss'] != 'mbd' else f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/alpha_{config['alpha']}/"
     plot_preds(learn, config, X, X_sw, save_folder)
@@ -137,7 +138,7 @@ def plot_preds(learn, config, X, X_sw, save_folder):
     plt.plot(np.linspace(0, 100, losses.shape[0]), losses)
     plt.xlabel("Years")
     plt.ylabel(f"Loss ({config['loss']})")
-    plt.savefig(f"{save_folder}/loss-100-years.jpg")
+    plt.savefig(f"{save_folder}loss-100-years.jpg")
 
     learn.show_preds_at(0, p=preds, t=targs, inp=inps, save=True, save_path = save_folder, with_targets=True, 
                     with_input=True, start_epoch=(n_iter-1)*config.horizon,
