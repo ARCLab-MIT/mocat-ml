@@ -7,10 +7,14 @@ from mocatml.data import *
 from mocatml.models.utils import *
 from mocatml.models.conv_rnn import *
 from tsai.imports import my_setup
+from tsai.utils import yaml2dict, dict2attrdict
+from fastai.callback.schedule import valley, steep
+from mygrad import sliding_window_view
 from fastai.callback.wandb import WandbCallback
-import wandb, json, argparse, os, h5py, time, datetime, torch
+import wandb, json, argparse, os, torch
 import numpy as np
 
+from loss_functions import *
 from utils import *
 
 my_setup()
@@ -48,7 +52,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "Checking how model generalizes")
 
     # Data settings 
-    parser.add_argument("--dataset", type = str, default = "x8x8", help = "dataset to train on")     
+    parser.add_argument("--ds", type = str, default = "x8x8", help = "dataset to train on")     
     parser.add_argument("--model", type = str, default = "convgru", help = "architecture to use")
     parser.add_argument("--horizon", type = int, default = 4) 
     parser.add_argument("--lookback", type = int, default = 4) 
@@ -59,7 +63,7 @@ if __name__ == "__main__":
     parser.add_argument("--sel_steps", type = int, default = None)
     parser.add_argument("--key", type = str, default = 'comb_Am_rp')
     parser.add_argument("--loss", type = str, default = 'mse')
-    parser.add_argument("--downsample", type = int, defualt = 0)
+    parser.add_argument("--downsample", type = int, default = 0)
 
     # Set defaults 
     args = parser.parse_args()
@@ -85,7 +89,7 @@ if __name__ == "__main__":
         config_base['convgru']['n_out'] = 6
 
     # Training
-    learn = train_on_dataset(args.dataset, config)
+    learn = train_on_dataset(args.ds, config)
 
     # Loss plot
     # path = f'plots/{args.dataset}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/'
@@ -101,3 +105,4 @@ if __name__ == "__main__":
     #     name = 'full' if i==0 else f'last {num_epochs_toshow} epochs'
     #     plt.savefig(f'{path}{name}.png')
     #     plt.show()
+

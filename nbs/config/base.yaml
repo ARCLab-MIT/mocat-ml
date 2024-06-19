@@ -1,7 +1,6 @@
 bs: 32 # batch size
 data:
-    path: '~/mocat-ml/data/TLE_density_all_'
-    dataset: ['x2x2', 'x5x5', 'x10x10', 'x15x15']
+    path: '/home/gridsan/ssarangerel/arclab_shared/mocatml_ds/'
 device: 'cuda' # 'cpu' or 'cuda'
 gap: 0 # gap between the last step of the lookback and the first step of the horizon
 horizon: 4 # number of steps into the future
