@@ -14,17 +14,17 @@ from loss_functions import *
 import torch.nn.functional as F
 
 
-def get_dataset(ds_name, config, downsample=True):
-    # path = f'/mnt/data/sumiya/mocat-ml/data/TLE_density_all_{ds_name}.mat'    
-    path = f'{os.getcwd()}/../../arclab_shared/mocatml_ds/combined_ds_mocatml/{ds_name}/TLE_density_all.mat'
+def get_dataset(ds_name, config):  
+    path = f'{config.data.path}{ds_name}/TLE_density_all.mat'
 
-    if downsample:
+    if config['downsample'] == 1:
+
         # using all keys for now
         keys = ["comb_Am_inc", "comb_Am_ra", "comb_Am_rp", "comb_inc_ra", "comb_inc_rp", "comb_ra_rp"]
         combined_data = np.zeros((50, 2436, len(keys), 36, 36))
 
+        #TODO make this faster
         file = h5py.File(path, 'r')
-
         for nch, key in enumerate(keys):
             data = np.array(file[key])[:, :config.sel_steps]
             for i in range(data.shape[0]):
@@ -34,16 +34,15 @@ def get_dataset(ds_name, config, downsample=True):
         data_sw = np.lib.stride_tricks.sliding_window_view(combined_data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
         data_sw = data_sw.transpose(0,1,5,2,3,4)
         data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
-
-        print(combined_data.shape, data_sw.shape)
         return combined_data, data_sw
 
 
-    data = np.array(h5py.File(path, 'r')[config["key"]])[:, :config.sel_steps]
-    data_sw = np.lib.stride_tricks.sliding_window_view(data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
-    data_sw = data_sw.transpose(0,1,4,2,3)
-    data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
-    return data, data_sw
+    else:
+        data = np.array(h5py.File(path, 'r')[config["key"]])[:, :config.sel_steps]
+        data_sw = np.lib.stride_tricks.sliding_window_view(data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
+        data_sw = data_sw.transpose(0,1,4,2,3)
+        data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
+        return data, data_sw
 
 
 
