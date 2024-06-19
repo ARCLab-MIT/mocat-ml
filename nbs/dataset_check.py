@@ -19,6 +19,7 @@ for i in range(5, 4, -1):
             if np.count_nonzero(sim[-1]) == 0:
                 corruption.append(i)
                 # print('corrupted at ', ds_name, file=sys.stdout)
+                
         print(corruption)
         # print('Done ', ds_name, file=sys.stdout)
 

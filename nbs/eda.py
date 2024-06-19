@@ -54,7 +54,6 @@ def plot_nonzeros(ds_name, key, data, stride=8):
 
 if __name__ == "__main__":
 
-<<<<<<< HEAD
     keys = ["comb_Am_inc", "comb_Am_ra", "comb_Am_rp", "comb_inc_ra", "comb_inc_rp", "comb_ra_rp"]
     for xPop in range(5, 4, -1):
         for xLaunch in range(15, 14, -1):
@@ -74,7 +73,7 @@ if __name__ == "__main__":
                 plot_nonzeros(ds_name, key, data[30], 1)
 
             # print(f"Done x{xPop}x{xLaunch}")
-=======
+
     model_type = 'convgru'
     config_base = yaml2dict('./config/base.yaml', attrdict=True)
     config_base[model_type] = yaml2dict(f'./config/{model_type}/{model_type}.yaml', attrdict=True)
@@ -86,4 +85,3 @@ if __name__ == "__main__":
 
     data = data[0]
     print(data.shape)
->>>>>>> 09249b18fdbb61ab372693f6b4e3e1c104f6a300
