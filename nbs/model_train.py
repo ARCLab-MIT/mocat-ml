@@ -41,7 +41,7 @@ def train_on_dataset(ds_name, config):
     # learn.fit(config.n_epoch, 1e-3)
 
     save_folder = f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/" if config['loss'] != 'mbd' else f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/alpha_{config['alpha']}/"
-    plot_preds(learn, config, X, X_sw, save_folder, years_to_plot=[i for i in range(1, 10)] + [20, 30, 40, 50, 75, 100])
+    plot_preds(learn, config, X, X_sw, save_folder)
 
     return learn
 
