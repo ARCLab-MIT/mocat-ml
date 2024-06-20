@@ -10,7 +10,6 @@ setup.txt
 time_model
 data_numpy
 data
-models
 nbs/resnet
 
 
@@ -21,6 +20,7 @@ draft_nbs
 gifs
 nbs/mocat-ml.code-workspace
 .gitignore
+models/
 
 # Ignore the content of the folders starting with Trash-
 .Trash-*/
