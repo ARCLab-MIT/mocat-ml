@@ -111,15 +111,15 @@ def show_preds_at(self:Learner, idx, p=None, t=None, inp=None, with_input=None,
     if with_input:
         i_seq = DensitySeq.create([inp[i][idx] for i in range(len(inp))])
         i_seq.show(title=titles[0], x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
-        if save: plt.savefig(save_path+titles[0])
+        if save: plt.savefig(save_path+'input')
     p_seq = DensitySeq.create([p[i][idx] for i in range(len(p))])
     p_seq.show(start_epoch=start_epoch+len(p), title=titles[1], 
                x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
-    if save: plt.savefig(save_path+titles[1])
+    if save: plt.savefig(save_path+'prediction')
 
     if with_targets:
         t_seq = DensitySeq.create([t[i][idx] for i in range(len(t))])
         t_seq.show(start_epoch=start_epoch+len(p), title=titles[2], 
                    x_disc=RP_DISC, y_disc=AM_DISC, **kwargs)
-        if save: plt.savefig(save_path+titles[2])
+        if save: plt.savefig(save_path+'target')
 
