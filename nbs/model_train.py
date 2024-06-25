@@ -19,10 +19,11 @@ from utils import *
 
 my_setup()
 
-
+# much faster on workstation
 def train_on_dataset(ds_name, config):
     # only implemented for convgru (add more architectures)
     dls, splits, X, X_sw = get_dataloader(ds_name, config)
+
     loss_func, metrics = get_loss_func_and_metrics(config)
 
     # model setup
@@ -39,10 +40,12 @@ def train_on_dataset(ds_name, config):
 
     learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
     # learn.fit(config.n_epoch, 1e-3)
+    if config.partial_loss is None:
+        save_folder = f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/" if config['loss'] != 'mbd' else f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/alpha_{config['alpha']}/"
+    else:
+        save_folder = f"plots/{config['loss']}_partial/{ds_name}_stride_{config['stride']}/" if config['loss'] != 'mbd' else f"plots/{config['loss']}_partial/{ds_name}_stride_{config['stride']}/alpha_{config['alpha']}/"
 
-    save_folder = f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/" if config['loss'] != 'mbd' else f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/alpha_{config['alpha']}/"
     plot_preds(learn, config, X, X_sw, save_folder)
-
     return learn
 
 
@@ -90,6 +93,7 @@ if __name__ == "__main__":
 
     # Training
     learn = train_on_dataset(args.ds, config)
+
 
     # Loss plot
     # path = f'plots/{args.dataset}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/'
