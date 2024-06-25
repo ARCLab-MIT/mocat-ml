@@ -17,7 +17,7 @@ import torch.nn.functional as F
 KEYS=["comb_Am_inc", "comb_Am_ra", "comb_Am_rp", "comb_inc_ra", "comb_inc_rp", "comb_ra_rp"]
 
 def get_dataset(ds_name, config):  
-    path = f'{config.data.path}TLE_density_all_{ds_name}.mat'
+    path = f'{config.data.path}{ds_name}/TLE_density_all.mat'
 
     if config['downsample'] == 1:
 
@@ -38,6 +38,7 @@ def get_dataset(ds_name, config):
 
 
     else:
+
         data = np.array(h5py.File(path, 'r')[config["key"]])[:, :config.sel_steps]
         data_sw = np.lib.stride_tricks.sliding_window_view(data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
         data_sw = data_sw.transpose(0,1,4,2,3)
@@ -144,15 +145,14 @@ def get_n_params(model):
 
 
 def plot_preds(learn, config, X, X_sw, save_folder, years_to_plot = [1/6, 1, 2, 3, 4, 5, 10, 100]):
+    train_stats = (learn.dls.train.after_batch.mean, learn.dls.train.after_batch.std)
+    ds_full = DensityData(X, lbk=config.lookback, h=config.horizon)
+    tl_full = TfmdLists(range(len(ds_full)), DensityTupleTransform(ds_full))
+    dl_full = TfmdDL(tl_full, bs=learn.dls.valid.bs, shuffle=False, num_workers=0, 
+                after_batch=Normalize.from_stats(*train_stats))
+
     for year in years_to_plot:
-        train_stats = (learn.dls.train.after_batch.mean, learn.dls.train.after_batch.std)
-        ds_full = DensityData(X, lbk=config.lookback, h=config.horizon)
-        tl_full = TfmdLists(range(len(ds_full)), DensityTupleTransform(ds_full))
-        dl_full = TfmdDL(tl_full, bs=learn.dls.valid.bs, shuffle=False, num_workers=0, 
-                    after_batch=Normalize.from_stats(*train_stats))
-
         n_iter = (X.shape[1]*year)//(config.horizon*100) - 1 if year>= 1 else 1
-
         print(year, n_iter)
 
         inps, preds, targs, losses = learn.get_preds_iterative(dl=dl_full, n_iter=n_iter, track_losses=True, with_input=True)
@@ -160,13 +160,21 @@ def plot_preds(learn, config, X, X_sw, save_folder, years_to_plot = [1/6, 1, 2, 
         if not os.path.exists(save_folder+f"{year}/"):
             os.makedirs(save_folder+f"{year}")
 
-        plt.clf()
-        plt.plot(np.linspace(0, 100, losses.shape[0]), losses)
-        plt.xlabel("Years")
-        plt.ylabel(f"Loss ({config['loss']})")
-        plt.savefig(f"{save_folder}/loss-100-years.jpg")
+        if year == 100:
+            plt.clf()
+            plt.plot(np.linspace(0, 100, losses.shape[0]), losses)
+            plt.xlabel("Years")
+            plt.ylabel(f"Loss ({config['loss']})")
+            plt.savefig(f"{save_folder}/loss-100-years.jpg")
+
+            with open(f"{save_folder}/loss-100-years.txt", "w") as output:
+                output.write(str(losses))
+
+        title_input = "input"
+        title_pred = f"{year} year-ahead predictions Loss: {losses[-1]}" if year > 1 else f"2 month-ahead predicitons Loss: {losses[-1]}"
+        title_target = f"{year} year-ahead targets" if year > 1 else f"2 month-ahead targets"
 
         learn.show_preds_at(0, p=preds, t=targs, inp=inps, save=True, save_path = save_folder+f"{year}/", with_targets=True, 
                         with_input=True, start_epoch=(n_iter-1)*config.horizon,
-                    titles=["Input", f"{year} year-ahead predictions with non-overlapping model", 
-                            f"{year} year-ahead targets"])
+                    titles=[title_input, title_pred, title_target])
+
