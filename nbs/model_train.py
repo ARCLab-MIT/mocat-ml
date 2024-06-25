@@ -26,17 +26,17 @@ def train_on_dataset(ds_name, config):
 
     loss_func, metrics = get_loss_func_and_metrics(config)
 
-    # model setup
-    config.convgru.norm = NormType.Batch if config.convgru.norm == 'batch' else None
-    model = StackUnstack(SimpleModel(**config.convgru)).to(default_device())
-    wandbc = WandbCallback(log_preds=False, log_model=False) if config.wandb.enabled else None
-    cbs = L() + wandbc
-    learn = Learner(dls, model, loss_func=loss_func, cbs=cbs, metrics=metrics)
-    learn.splits = splits # This is needed for the evaluation notebook
-    lr_max = config.lr_max if config.lr_max is not None else learn.lr_find()
+    # # model setup
+    # config.convgru.norm = NormType.Batch if config.convgru.norm == 'batch' else None
+    # model = StackUnstack(SimpleModel(**config.convgru)).to(default_device())
+    # wandbc = WandbCallback(log_preds=False, log_model=False) if config.wandb.enabled else None
+    # cbs = L() + wandbc
+    # learn = Learner(dls, model, loss_func=loss_func, cbs=cbs, metrics=metrics)
+    # learn.splits = splits # This is needed for the evaluation notebook
+    # lr_max = config.lr_max if config.lr_max is not None else learn.lr_find()
     
-    # training 
-    print("MODEL SIZE: ", get_n_params(learn), "\n")
+    # # training 
+    # print("MODEL SIZE: ", get_n_params(learn), "\n")
 
     learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
     # learn.fit(config.n_epoch, 1e-3)

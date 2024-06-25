@@ -34,6 +34,7 @@ def get_dataset(ds_name, config):
         data_sw = np.lib.stride_tricks.sliding_window_view(combined_data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
         data_sw = data_sw.transpose(0,1,5,2,3,4)
         data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
+        print(data_sw.shape)
         return combined_data, data_sw
 
 
@@ -108,10 +109,10 @@ def downsample_avg(image):
 
 
 def downsample_avg_numpy_divisible(image):
-  in_height, in_width = image.shape
-  h_factor, w_factor = in_height // 36, in_width // 36
-  blocks = image.reshape(h_factor, in_height // h_factor, w_factor, in_width // w_factor)
-  downsampled_image = np.mean(blocks, axis=2)
+    in_height, in_width = image.shape
+    h_factor, w_factor = in_height // 36, in_width // 36
+    blocks = image.reshape(in_height // h_factor, h_factor, in_width // w_factor, w_factor)
+    downsampled_image = np.mean(blocks, axis=3)
 
   if downsampled_image.shape[0] != 36:
       return np.mean(downsampled_image, axis=0)
