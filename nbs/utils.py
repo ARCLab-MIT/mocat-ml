@@ -12,7 +12,8 @@ import numpy as np
 
 from loss_functions import *
 import torch.nn.functional as F
-
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 KEYS=["comb_Am_inc", "comb_Am_ra", "comb_Am_rp", "comb_inc_ra", "comb_inc_rp", "comb_ra_rp"]
 
@@ -21,21 +22,36 @@ def get_dataset(ds_name, config):
 
     if config['downsample'] == 1:
 
-        combined_data = np.zeros((50, 2436, len(KEYS), 36, 36))
+        combined_data = np.zeros((100, 2436, len(KEYS), 36, 36))
 
-        #TODO make this faster
         file = h5py.File(path, 'r')
-        for nch, key in enumerate(KEYS):
+        start_time = time.time()
+
+        def process_key(nch, key):
             data = np.array(file[key])[:, :config.sel_steps]
-            for i in range(data.shape[0]):
-                for j in range(data.shape[1]):
-                    combined_data[i, j, nch] = data[i, j] if data[i, j].shape == (36, 36) else downsample_avg(data[i, j])
+            if data.shape[2:] == (36, 36):
+                return nch, data
+            else: 
+                padded_data = pad_distribution(data)
+                return nch, downsample_distribution(padded_data)
+        
+        with ThreadPoolExecutor() as executor:
+            results = list(executor.map(lambda nch_key: process_key(*nch_key), enumerate(KEYS)))
+
+        for nch, data in results:
+            combined_data[:,:,nch] = data
+
+        end_time = time.time()
+        print(combined_data[2,3,:,:])
+
+        execution_time = end_time - start_time
+        print(f"Execution time: {execution_time} seconds")
 
         data_sw = np.lib.stride_tricks.sliding_window_view(combined_data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
         data_sw = data_sw.transpose(0,1,5,2,3,4)
         data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
+        print(data_sw.shape)
         return combined_data, data_sw
-
 
     else:
         data = np.array(h5py.File(path, 'r')[config["key"]])[:, :config.sel_steps]
@@ -43,6 +59,25 @@ def get_dataset(ds_name, config):
         data_sw = data_sw.transpose(0,1,4,2,3)
         data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
         return data, data_sw
+
+
+def pad_distribution(data): 
+    target_width = 180
+    width_pad = target_width - data.shape[3]
+    pad_left = width_pad // 2
+    pad_right = width_pad - pad_left
+
+    padded_array = np.pad(data, ((0, 0), (0, 0), (0, 0), (pad_left, pad_right)), mode='constant', constant_values=0)
+    return padded_array
+
+
+def downsample_distribution(data): 
+    in_height, in_width = data.shape[2:]
+    h_factor, w_factor = in_height // 36, in_width // 36
+    blocks = data.reshape(*data.shape[:2], in_height // h_factor, h_factor, in_width // w_factor, w_factor)
+    downsampled_image = np.mean(blocks, axis=(3,5))
+    
+    return downsampled_image
 
 
 
@@ -101,14 +136,14 @@ def downsample_avg(image):
   return downsample_avg_numpy_divisible(pad_with_zeros(image))
 
 def downsample_avg_numpy_divisible(image):
-  in_height, in_width = image.shape
-  h_factor, w_factor = in_height // 36, in_width // 36
-  blocks = image.reshape(h_factor, in_height // h_factor, w_factor, in_width // w_factor)
-  downsampled_image = np.mean(blocks, axis=2)
+    in_height, in_width = image.shape
+    h_factor, w_factor = in_height // 36, in_width // 36
+    blocks = image.reshape(in_height // h_factor, h_factor, in_width // w_factor, w_factor)
+    downsampled_image = np.mean(blocks, axis=3)
 
-  if downsampled_image.shape[0] != 36:
-      return np.mean(downsampled_image, axis=0)
-  return downsampled_image
+    if downsampled_image.shape[1] != 36:
+        return np.mean(downsampled_image, axis=1)
+    return downsampled_image
 
 
 def pad_with_zeros(image):
