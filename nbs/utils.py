@@ -10,6 +10,9 @@ from mygrad import sliding_window_view
 import os, h5py, torch
 import numpy as np
 
+import torch
+from torchvision import transforms
+
 from loss_functions import *
 import torch.nn.functional as F
 
@@ -17,10 +20,9 @@ import torch.nn.functional as F
 KEYS=["comb_Am_inc", "comb_Am_ra", "comb_Am_rp", "comb_inc_ra", "comb_inc_rp", "comb_ra_rp"]
 
 def get_dataset(ds_name, config):  
-    path = f'{config.data.path}{ds_name}/TLE_density_all.mat'
+    path = f'{config.data.path}/TLE_density_all_{ds_name}.mat'
 
-    if config['downsample'] == 1:
-
+    if config.downsample == 1:
         combined_data = np.zeros((50, 2436, len(KEYS), 36, 36))
 
         #TODO make this faster
@@ -37,15 +39,49 @@ def get_dataset(ds_name, config):
         print(data_sw.shape)
         return combined_data, data_sw
 
-
     else:
+        mat = h5py.File(path, 'r')
+        data = np.array(mat[config.key])[:, :config.sel_steps]
+        d = np.array(mat[config.key])[:, :config.sel_steps]
+        if config.sample:
+            num_sim, timesteps = data.shape[:2]
+            transform = transforms.Compose([    
+                transforms.Resize((32, 32))
+            ])  
+            
+            data_reshaped = torch.tensor(data).view((-1, 1, 36, 99))
 
-        data = np.array(h5py.File(path, 'r')[config["key"]])[:, :config.sel_steps]
+            transformed_data = []
+            for sample in data_reshaped:
+                transformed_sample = transform(sample)
+                transformed_data.append(transformed_sample)
+
+            data = torch.stack(transformed_data, dim=0)
+            data = np.array(data.reshape(num_sim, timesteps, 32, 32))
+            print(data.shape)
+
         data_sw = np.lib.stride_tricks.sliding_window_view(data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
         data_sw = data_sw.transpose(0,1,4,2,3)
         data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
-        return data, data_sw
+     
+        # import matplotlib.pyplot as plt
 
+        # fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(5, 3))
+        # extent=[np.min(mat['rp_disc']), np.max(mat['rp_disc']), np.min(mat['Am_disc']), np.max(mat['Am_disc'])]
+        # axes[0].imshow(d[0][2000], extent = extent, aspect='auto')
+        # axes[0].set_xlabel('rp [km]')  
+        # axes[0].set_ylabel('Am [m2/kg]') 
+        # axes[0].set_title('Original')
+        
+        # axes[1].imshow(np.array(transformed_data[2000][0]), extent = extent, aspect='auto')
+        # axes[1].set_xlabel('rp [km]') 
+        # axes[1].set_ylabel('Am [m2/kg]') 
+        # axes[1].set_title('Sampled to 32x32')
+        # fig.tight_layout()
+
+        # plt.savefig('transformed.png')
+
+        return data, data_sw
 
 
 def get_dataloader(dataset, config):
@@ -71,7 +107,6 @@ def get_dataloader(dataset, config):
                         num_workers=config.num_workers)
     
     return dls, splits, data, data_sw
-
 
     
 
@@ -114,9 +149,9 @@ def downsample_avg_numpy_divisible(image):
     blocks = image.reshape(in_height // h_factor, h_factor, in_width // w_factor, w_factor)
     downsampled_image = np.mean(blocks, axis=3)
 
-  if downsampled_image.shape[0] != 36:
-      return np.mean(downsampled_image, axis=0)
-  return downsampled_image
+    if downsampled_image.shape[0] != 36:
+        return np.mean(downsampled_image, axis=0)
+    return downsampled_image
 
 
 

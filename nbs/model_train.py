@@ -11,7 +11,7 @@ from tsai.utils import yaml2dict, dict2attrdict
 from fastai.callback.schedule import valley, steep
 from mygrad import sliding_window_view
 from fastai.callback.wandb import WandbCallback
-import wandb, json, argparse, os, torch
+import wandb, json, argparse, os, torch, time
 import numpy as np
 
 from loss_functions import *
@@ -19,33 +19,27 @@ from utils import *
 
 my_setup()
 
-# much faster on workstation
+
 def train_on_dataset(ds_name, config):
     # only implemented for convgru (add more architectures)
     dls, splits, X, X_sw = get_dataloader(ds_name, config)
-
     loss_func, metrics = get_loss_func_and_metrics(config)
 
-    # # model setup
-    # config.convgru.norm = NormType.Batch if config.convgru.norm == 'batch' else None
-    # model = StackUnstack(SimpleModel(**config.convgru)).to(default_device())
-    # wandbc = WandbCallback(log_preds=False, log_model=False) if config.wandb.enabled else None
-    # cbs = L() + wandbc
-    # learn = Learner(dls, model, loss_func=loss_func, cbs=cbs, metrics=metrics)
-    # learn.splits = splits # This is needed for the evaluation notebook
-    # lr_max = config.lr_max if config.lr_max is not None else learn.lr_find()
+    # model setup
+    config.convgru.norm = NormType.Batch if config.convgru.norm == 'batch' else None
+    model = StackUnstack(SimpleModel(**config.convgru)).to(default_device())
+    wandbc = WandbCallback(log_preds=False, log_model=False) if config.wandb.enabled else None
+    cbs = L() + wandbc
+    learn = Learner(dls, model, loss_func=loss_func, cbs=cbs, metrics=metrics)
+    learn.splits = splits # This is needed for the evaluation notebook
+    lr_max = config.lr_max if config.lr_max is not None else learn.lr_find()
     
-    # # training 
-    # print("MODEL SIZE: ", get_n_params(learn), "\n")
+    # training 
+    print("MODEL SIZE: ", get_n_params(learn), "\n")
 
     learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
-    # learn.fit(config.n_epoch, 1e-3)
-    if config.partial_loss is None:
-        save_folder = f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/" if config['loss'] != 'mbd' else f"plots/{config['loss']}/{ds_name}_stride_{config['stride']}/alpha_{config['alpha']}/"
-    else:
-        save_folder = f"plots/{config['loss']}_partial/{ds_name}_stride_{config['stride']}/" if config['loss'] != 'mbd' else f"plots/{config['loss']}_partial/{ds_name}_stride_{config['stride']}/alpha_{config['alpha']}/"
 
-    plot_preds(learn, config, X, X_sw, save_folder)
+    plot_preds(learn, config, X, X_sw, save_folder=config.save_folder)
     return learn
 
 
@@ -67,6 +61,8 @@ if __name__ == "__main__":
     parser.add_argument("--key", type = str, default = 'comb_Am_rp')
     parser.add_argument("--loss", type = str, default = 'mse')
     parser.add_argument("--downsample", type = int, default = 0)
+    parser.add_argument("--sample", type = int, default = 0) # whether or not to sample to 32x32
+
 
     # Set defaults 
     args = parser.parse_args()
@@ -79,7 +75,7 @@ if __name__ == "__main__":
     config = AttrDict(config_base)
     
     config.partial_loss = [0] if args.partial_loss == 1 else None
-    for key in ['horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss', 'downsample']:
+    for key in ['horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss', 'downsample', 'sample']:
         config[key] = arg_dict[key]
 
     if config['loss'] == 'mbd':
@@ -87,26 +83,45 @@ if __name__ == "__main__":
 
     print("CONFIG \n", json.dumps(config, indent=4))
 
+
     if config['downsample'] == 1:
         config_base['convgru']['n_in'] = 6
         config_base['convgru']['n_out'] = 6
+
+
+    name = f"{args.ds}/n_epoch_{config.n_epoch}_sample_{config.sample}_hor_lkb_{config.horizon}_str_{config.stride}_bs_{config.bs}"
+    if config.partial_loss is None:
+        if config['loss'] != 'mbd':
+            save_folder = f"plots/{config.loss}/{name}/" 
+        else: 
+            save_folder = f"plots/mbd_alpha_{config.alpha}/{name}/"
+    else:
+        if config['loss'] != 'mbd':
+            save_folder = f"plots/{config.loss}/{name}_partial_1/"
+        else:
+            save_folder = f"plots/mbd_alpha_{config.alpha}/{name}_partial_1/"
+
+    config['save_folder'] = save_folder
+
 
     # Training
     learn = train_on_dataset(args.ds, config)
 
 
     # Loss plot
-    # path = f'plots/{args.dataset}/stride_{config.stride}_bs_{config.bs}/num_epochs_{config.n_epoch}/'
-    # if not os.path.exists(path):
-    #     os.makedirs(path)
+    path = f'{config.save_folder}/loss/'
+    if not os.path.exists(path):
+        os.makedirs(path)
 
-    # for i in [0, 0.5, 0.75, 0.9]:
-    #     num_epochs_toshow = config.n_epoch - int(i*config.n_epoch)
-    #     fig, ax = plt.subplots()
-    #     skip_start = int(len(learn.recorder.losses) * i)
-    #     plot_loss(learn.recorder, skip_start=skip_start, ax=ax)
-    #     ax.set_title('learning curve full' if skip_start == 0 else f'learning curve last {num_epochs_toshow} epochs')
-    #     name = 'full' if i==0 else f'last {num_epochs_toshow} epochs'
-    #     plt.savefig(f'{path}{name}.png')
-    #     plt.show()
+    import matplotlib.pyplot as plt
+
+    for i in [0, 0.5, 0.75, 0.9]:
+        num_epochs_toshow = config.n_epoch - int(i*config.n_epoch)
+        fig, ax = plt.subplots()
+        skip_start = int(len(learn.recorder.losses) * i)
+        plot_loss(learn.recorder, skip_start=skip_start, ax=ax)
+        ax.set_title('learning curve full' if skip_start == 0 else f'learning curve last {num_epochs_toshow} epochs')
+        name = 'full' if i==0 else f'last_{num_epochs_toshow}_epochs'
+        plt.savefig(f'{path}{name}.png')
+        plt.show()
 
