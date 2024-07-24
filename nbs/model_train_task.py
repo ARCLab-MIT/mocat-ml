@@ -1,4 +1,4 @@
-import sys
+import sys, os
 sys.path.append('..')
 from fastai.vision.all import *
 from mocatml.utils import *
@@ -111,6 +111,8 @@ def get_dataset(config):
 
     return (np.stack(datas,2), np.stack(data_sws,2)) if config.task == 2 else (datas, data_sws)
 
+
+
 def get_n_params(model):
     pp=0
     for p in list(model.parameters()):
@@ -119,6 +121,7 @@ def get_n_params(model):
             nn = nn*s
         pp += nn
     return pp
+
 
 
 if __name__ == "__main__":    
@@ -162,6 +165,48 @@ if __name__ == "__main__":
 
     print("CONFIG \n", json.dumps(config, indent=4))
 
+
     # Training
-    learn = train_on_dataset(config)
+    if config.task == 2:
+        learn = train_on_dataset(config)
+
+        # save losses
+        train_col = learn.recorder.metric_names.index('train_loss') - 1 
+        train_losses = L(learn.recorder.values).itemgot(train_col)
+
+        valid_col = learn.recorder.metric_names.index('valid_loss') - 1 
+        valid_losses = L(learn.recorder.values).itemgot(valid_col)
+
+        print(train_losses, valid_losses)
+
+        config['train_losses'] = list(train_losses)
+        config['valid_losses'] = list(valid_losses)
+
+    else:
+        models = train_on_dataset(config)
+        
+        # save losses
+        for key, learn in zip(KEYS, models):
+            train_col = learn.recorder.metric_names.index('train_loss') - 1 
+            train_losses = L(learn.recorder.values).itemgot(train_col)
+
+            valid_col = learn.recorder.metric_names.index('valid_loss') - 1 
+            valid_losses = L(learn.recorder.values).itemgot(valid_col)
+            
+            config[key] = {}
+            config[key]['train_losses'] = list(train_losses)
+            config[key]['valid_losses'] = list(valid_losses)
+
+
+    save_to = f'result/task_{config.task}/'
+    if not os.path.exists(save_to):
+        os.makedirs(save_to)
+
+    import datetime
+    def get_current_datetime_string():
+        now = datetime.datetime.now()
+        return now.strftime("%Y-%m-%d-%H:%M:%S")
+
+    with open(save_to + f'{get_current_datetime_string()}.json', 'w') as f:
+        json.dump(config, f, indent=4)
 
