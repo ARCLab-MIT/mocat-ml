@@ -12,6 +12,7 @@ from fastai.callback.schedule import valley, steep
 from mygrad import sliding_window_view
 from fastai.callback.wandb import WandbCallback
 import wandb, json, argparse, os, torch, time
+import wandb, json, argparse, os, torch, time
 import numpy as np
 
 from loss_functions import *
@@ -32,13 +33,23 @@ def train_on_dataset(ds_name, config):
     learn = Learner(dls, model, loss_func=loss_func, cbs=cbs, metrics=metrics)
     learn.splits = splits # This is needed for the evaluation notebook
     lr_max = config.lr_max if config.lr_max is not None else learn.lr_find()
+    # model setup
+    config.convgru.norm = NormType.Batch if config.convgru.norm == 'batch' else None
+    model = StackUnstack(SimpleModel(**config.convgru)).to(default_device())
+    wandbc = WandbCallback(log_preds=False, log_model=False) if config.wandb.enabled else None
+    cbs = L() + wandbc
+    learn = Learner(dls, model, loss_func=loss_func, cbs=cbs, metrics=metrics)
+    learn.splits = splits # This is needed for the evaluation notebook
+    lr_max = config.lr_max if config.lr_max is not None else learn.lr_find()
     
+    # training 
+    print("MODEL SIZE: ", get_n_params(learn), "\n")
     # training 
     print("MODEL SIZE: ", get_n_params(learn), "\n")
 
     learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
-    # learn.fit(config.n_epoch, 1e-3)
 
+    plot_preds(learn, config, X, X_sw, save_folder=config.save_folder)
     plot_preds(learn, config, X, X_sw, save_folder=config.save_folder)
     return learn
 
@@ -63,6 +74,8 @@ if __name__ == "__main__":
     parser.add_argument("--downsample", type = int, default = 0)
     parser.add_argument("--sample", type = int, default = 0) # whether or not to sample to 32x32
 
+    parser.add_argument("--sample", type = int, default = 0) # whether or not to sample to 32x32
+
 
     # Set defaults 
     args = parser.parse_args()
@@ -75,6 +88,7 @@ if __name__ == "__main__":
     config = AttrDict(config_base)
     
     config.partial_loss = [0] if args.partial_loss == 1 else None
+    for key in ['horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss', 'downsample', 'sample']:
     for key in ['horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss', 'downsample', 'sample']:
         config[key] = arg_dict[key]
 
