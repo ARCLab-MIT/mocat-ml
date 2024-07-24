@@ -19,7 +19,6 @@ from utils import *
 
 my_setup()
 
-
 def train_on_dataset(ds_name, config):
     # only implemented for convgru (add more architectures)
     dls, splits, X, X_sw = get_dataloader(ds_name, config)
