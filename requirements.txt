@@ -1,0 +1,9 @@
+nbdev
+git+https://github.com/timeseriesAI/tsai.git
+wandb
+optuna
+papermill
+seaborn
+h5py
+vit_pytorch
+mygrad

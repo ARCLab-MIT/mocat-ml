@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "orbitalrisk_ML"
+  site-url: "https://arclab.github.io/orbitalrisk_ML"
+  description: "ML experiments for orbital risk/capacity calculation and validation"
+  repo-branch: main
+  repo-url: "https://github.com/arclab/orbitalrisk_ML"
