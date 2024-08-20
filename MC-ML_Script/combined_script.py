@@ -1,3 +1,26 @@
+# To run both mocat-mc and mocat-ml in one script
+# Developer: Nathan Lavenda, Di Wu
+
+import subprocess
+import sys
+
+def install(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+# List of packages to check and install if necessary
+required_packages = [
+    "h5py",
+    "torch", "torchvision",
+    "fastai",
+    "tsai"
+]
+
+for package in required_packages:
+    try:
+        __import__(package)
+    except ImportError:
+        install(package)
+
 import subprocess
 import os
 import h5py
@@ -7,10 +30,13 @@ import fastai
 
 def run_mocat_mc(ICfile, seed):
     matlab_command = (
-        "addpath('C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/'); "
+        # "addpath('C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/'); "
+        "addpath('/Users/woodywu/Desktop/Research/Project_orbitalrisk/MOCAT_ML/mocat-ml-nathan_lev/MC-ML_Script/'); "
         f"mocat_mc_wrapper('{ICfile}', {seed});"
     )
-    subprocess.run(['matlab', '-batch', matlab_command], check=True)
+    matlab_path = r'/Applications/MATLAB_R2023a.app/bin/matlab'
+    # subprocess.run(['matlab', '-batch', matlab_command], check=True)
+    subprocess.run([matlab_path, '-batch', matlab_command], check=True)
 
 def get_first_mat_file(directory):
     # List all files in the directory
@@ -78,10 +104,11 @@ def main():
     seed = 1  # Random seed
 
     # Path to the machine learning model
-    ml_model_path = 'C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/models/d_64_epoch_10_TSTPlus.pkl'
-
+    # ml_model_path = 'C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/models/d_64_epoch_10_TSTPlus.pkl'
+    ml_model_path = '/Users/woodywu/Desktop/Research/Project_orbitalrisk/MOCAT_ML/mocat-ml-nathan_lev/MC-ML_Script/models/d_64_epoch_10_TSTPlus.pkl'
     # Output directory for MOCAT-MC
-    output_directory = 'C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/output/'
+    # output_directory = 'C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/output/'
+    output_directory = '/Users/woodywu/Desktop/Research/Project_orbitalrisk/MOCAT_ML/mocat-ml-nathan_lev/MC-ML_Script/output'
 
     # Step 1: Run the MOCAT-MC simulation
     run_mocat_mc(ICfile, seed)

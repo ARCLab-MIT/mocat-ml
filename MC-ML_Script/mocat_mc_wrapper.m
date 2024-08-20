@@ -1,8 +1,11 @@
 function mocat_mc_wrapper(ICfile, seed)
     % Add necessary paths
-    addpath(genpath('C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/'));
-    addpath(genpath('C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/supporting_data/'));
-    addpath(genpath('C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/supporting_functions/'));
+    %addpath(genpath('C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/'));
+    %addpath(genpath('C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/supporting_data/'));
+    %addpath(genpath('C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/supporting_functions/'));
+    addpath(genpath('/Users/woodywu/Desktop/Research/Project_orbitalrisk/MOCAT_ML/mocat-ml-nathan_lev/MC-ML_Script/'));
+    addpath(genpath('/Users/woodywu/Desktop/Research/Project_orbitalrisk/MOCAT_ML/mocat-ml-nathan_lev/MC-ML_Script/supporting_data/'));
+    addpath(genpath('/Users/woodywu/Desktop/Research/Project_orbitalrisk/MOCAT_ML/mocat-ml-nathan_lev/MC-ML_Script/supporting_functions/'));
 
     % Set initial conditions and seed
     params.ICfile = ICfile;

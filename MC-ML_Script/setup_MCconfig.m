@@ -111,7 +111,8 @@ function cfgMC = setup_MCconfig(rngseed,ICfile)
 
     % foldername = 'C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/output/';
     % Ensure output directory exists
-    output_folder = 'C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/output/';
+    % output_folder = 'C:/Users/Nathan/Desktop/mocat-ml-main/MC-ML_Script/output/';
+    output_folder = '/Users/woodywu/Desktop/Research/Project_orbitalrisk/MOCAT_ML/mocat-ml-nathan_lev/MC-ML_Script/output/';
     if exist(output_folder, 'dir') == 0  % Folder does not exist, so create it
         mkdir(output_folder);
     end
