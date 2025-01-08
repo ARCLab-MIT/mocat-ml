@@ -39,19 +39,16 @@ def get_preds_iterative(self:Learner, dl, n_iter=1, track_losses=False,
     if track_losses:
         losses = [self.loss_func(p,t).item()]
     for iter in range(n_iter-1):
-        data_copy = ds.data[:,(iter+1)*(ds.lbk+ds.gap):(iter+1)*(ds.lbk+ds.gap) + ds.lbk + ds.h].copy()
+        data_copy = ds.data[:,(iter+1)*(ds.lbk+ds.gap):\
+                                 (iter+1)*(ds.lbk+ds.gap) + ds.lbk + ds.h].copy()
         #ds_copy.data = ds_copy.data[:,(ds_copy.lbk+ds_copy.gap):] # Move 1 window forward
         ds_copy = DensityData(data_copy, lbk=ds.lbk, h=ds.h, gap=ds.gap)
         tl = TfmdLists(range(len(ds_copy)), DensityTupleTransform(ds_copy))
         # Save the targets before replacing data
         t = stack_density_list_as_preds_targs([y for _,y in tl])
         # Replace the first inputs of the dataset with the predictions
-        # print(len(p), p[0].shape)
-        # a=a
         p_dseqs = [DensitySeq.from_preds_or_targs(p, i, to_array=True) \
                    for i in range(len(p[0]))]
-        # print(len(p_dseqs), len(p_dsseqs[0]), p_dseqs[0][0].shape)
-        # a=a
         preds_data = np.stack(p_dseqs).squeeze()
         ds_copy.data[:,:ds_copy.lbk] = preds_data
         dl_new = dl.new(TfmdLists(range(len(ds_copy)), 
