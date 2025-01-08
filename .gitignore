@@ -20,7 +20,6 @@ draft_nbs
 gifs
 nbs/mocat-ml.code-workspace
 .gitignore
-models/
 nbs/config
 
 # Ignore the content of the folders starting with Trash-

@@ -21,7 +21,7 @@ my_setup()
 
 def train_on_dataset(ds_name, config):
     dataloaders = get_dls(ds_name, config)
-    models , Xs = [], []
+    models , Xs, X_sws = [], [], []
     model_num = 1
     for dls, splits, X, X_sw in dataloaders:
         loss_func, metrics = get_loss_func_and_metrics(config)
@@ -39,42 +39,71 @@ def train_on_dataset(ds_name, config):
         print("MODEL SIZE: ", get_n_params(learn), "\n")
 
         learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
-        models.append(learn)
 
+        models.append(learn)
         Xs.append(X)
+        X_sws.append(X_sw)
 
         print(f"Finished training model number:{model_num} out of {config['num']}")
 
         model_num += 1      
     
-    evaluation(models, Xs, config)
+    evaluation(models, Xs, X_sws, config)
     return models
 
-def evaluation(models, Xs, config):
+
+
+def evaluation(models, Xs, X_sws, config):
     
-    for learn, X in zip(models, Xs):
+    preds, targets = [], []
+    first = True
+    
+    for learn, X, X_sw in zip(models, Xs, X_sws):
+        print("X shape", X.shape, "X_sw shape", X_sw.shape)
         train_stats = (learn.dls.train.after_batch.mean, learn.dls.train.after_batch.std)
         ds_full = DensityData(X, lbk=config.lookback, h=config.horizon)
         tl_full = TfmdLists(range(len(ds_full)), DensityTupleTransform(ds_full))
         dl_full = TfmdDL(tl_full, bs=learn.dls.valid.bs, shuffle=False, num_workers=0, 
                     after_batch=Normalize.from_stats(*train_stats))
+        
+        print("shape of X", X.shape, "shape of X_sw", X_sw.shape)
 
-        n_iter = X.shape[1]//(config.horizon) - 1   
-        inps, preds, targs, losses = learn.get_preds_iterative(dl=dl_full, n_iter=n_iter, track_losses=True, with_input=True)   
+        if first:
+            inp, p, t = learn.get_preds(dl=dl_full, with_input=True)
+            print("inp shape", inp[0].shape, len(inp), "p shape", p[0].shape, len(p), "t shape", t[0].shape, len(t))
+        else:
+            inp, p, t = learn.get_preds(dl=dl_full, with_input=True)
 
-        for i in [inps, preds, targs, losses]:
-            print(type(i))
-            try:
-                print(i.shape)
-            except:
-                print(len(i))
 
-            print("----------"*8)
+        n_iter = X.shape[1]//(config.horizon) - 1  # maybe off by one here
+        print(n_iter)  
 
-    return 
+        ds = dl_full.ds
+        for iter in range(n_iter-1):
+            data_copy = ds.data[:,(iter+1)*(ds.lbk+ds.gap):(iter+1)*(ds.lbk+ds.gap) + ds.lbk + ds.h].copy()
+            ds_copy = DensityData(data_copy, lbk=ds.lbk, h=ds.h, gap=ds.gap)
+            tl = TfmdLists(range(len(ds_copy)), DensityTupleTransform(ds_copy))
+            t = stack_density_list_as_preds_targs([y for _,y in tl])
+            p_dseqs = [DensitySeq.from_preds_or_targs(p, i, to_array=True) for i in range(len(p[0]))]
+            preds_data = np.stack(p_dseqs).squeeze()
+            ds_copy.data[:,:ds_copy.lbk] = preds_data
+
+            dl_new = dl_full.new(TfmdLists(range(len(ds_copy)), DensityTupleTransform(ds_copy)))
+            p,_ = learn.get_preds(dl=dl_new, with_input=False)
+
+            # if track_losses:
+                # losses.append(self.loss_func(p,t).item())
+            
+
+        # if with_input: res = [inp] + res
+        # if track_losses: 
+        #     losses = tensor(losses)
+        #     res = res + [losses]
+
+    return models
 
 def get_datasets(ds_name, config):
-    path = f'{config.data.path}{ds_name}/TLE_density_all.mat'
+    path = f'{config.data.path}/TLE_density_all_{ds_name}.mat'
     data = np.array(h5py.File(path, 'r')[config["key"]])[:, :config.sel_steps]
     datasets = np.array_split(data, config['num'], axis=1) # this can result in datasets with different sizes
     data_sws = []
@@ -93,9 +122,11 @@ def get_dls(ds_name, config):
     dataloaders = []
 
     for data, data_sw in zip(datasets, data_sws):
-        splits = RandomSplitter()(data) #valid_pct=0.2,
+        print("data shape", data.shape,"data_sw shape", data_sw.shape)
+
+        splits = RandomSplitter()(data) #valid_pct=0.2
         ds = DensityData(data_sw, lbk=config.lookback, h=config.horizon, gap=config.gap)
-        samples_per_simulation = data_sw.shape[0]//(data.shape[0])
+        samples_per_simulation = data_sw.shape[0]//data.shape[0]
         train_idxs = calculate_sample_idxs(splits[0], samples_per_simulation)
         valid_idxs = calculate_sample_idxs(splits[1], samples_per_simulation)
 

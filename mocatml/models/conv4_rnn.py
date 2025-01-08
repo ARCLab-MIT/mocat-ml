@@ -1,5 +1,5 @@
 __all__ = ['AddCoords', 'CoordConv', 'Conv4GRU_cell', 'TimeDistributed', 'Encoder4d', 'UpsampleBlock', 'conditional_crop_pad',
-           'Decoder4d', 'StackUnstack', 'SimpleModel', 'StackLoss', 'PartialStackLoss', 'MultiImageDice', 'Conv4d']
+           'Decoder4d', 'Stack4Unstack', 'Simple4Model', 'StackLoss', 'PartialStackLoss', 'MultiImageDice', 'Conv4d']
 
 from fastai.vision.all import *
 import torch.nn.functional as F
@@ -522,7 +522,7 @@ def _unbind_densities(x, dim=1):
     return x
 
 # %% ../../nbs_lib/models.conv_rnn.ipynb 38
-class StackUnstack(Module):
+class Stack4Unstack(Module):
     "Stack together inputs, apply module, unstack output"
     def __init__(self, module, dim=1):
         self.dim = dim
@@ -538,7 +538,7 @@ class StackUnstack(Module):
         else: return outputs.unbind(dim=self.dim)
 
 # %% ../../nbs_lib/models.conv_rnn.ipynb 39
-class SimpleModel(Module):
+class Simple4Model(Module):
     "Simple Encoder/Decoder module"
     def __init__(self, n_in=1, n_out=1, szs=[16,64,96], ks=3, rnn_ks=5, 
                  act=nn.ReLU, blur=False, attn=False, norm=None, strategy='zero', 

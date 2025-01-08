@@ -59,6 +59,11 @@ class PhyCell(Module):
 
     def forward(self, input_, first_timestep=False): # input_ [batch_size, 1, channels, width, height]
         batch_size = input_.data.size()[0]
+        # if len(input_.shape) == 4: # add input channel if it does not have one added by Sumiya
+        #     bs, w, h = input_.shape[0], input_.shape[-2], input_.shape[-1]
+        #     input_ = input_.reshape(bs, 1, 1, w, h)
+        #     print(input_.shape)
+
         if (first_timestep):
             self.initHidden(batch_size, dtype=input_.dtype) # init Hidden at each forward start
 
@@ -216,7 +221,8 @@ class image_encoder(nn.Module):
         self.c2 = dcgan_conv(int(nf/2), nf, stride=1) # (nf) x 64 x 64
         self.c3 = dcgan_conv(nf, nf*2, stride=1) # (2*nf) x 32 x 32
         self.c4 = dcgan_conv(nf*2, nf*2, stride=1) # (2*nf) x 32 x 32
-        self.c5 = dcgan_conv(nf*2, nf*4, stride=2) # (4*nf) x 16 x 16
+        # self.c5 = dcgan_conv(nf*2, nf*4, stride=2) # (4*nf) x 16 x 16
+        self.c5 = dcgan_conv(nf*2, nf*4, stride=1) # (4*nf) x 16 x 16
         self.c6 = dcgan_conv(nf*4, nf*4, stride=1) # (4*nf) x 16 x 16
 
     def forward(self, input):
@@ -226,7 +232,6 @@ class image_encoder(nn.Module):
         h4 = self.c4(h3)     # (2*nf) x 32 x 32
         h5 = self.c5(h4)     # (4*nf) x 16 x 16
         h6 = self.c6(h5)     # (4*nf) x 16 x 16
-
         return h6, [h1, h2, h3, h4, h5, h6]
 
 # Cell
@@ -242,7 +247,7 @@ class image_decoder(nn.Module):
         # self.upc6 = nn.ConvTranspose2d(in_channels=nf,out_channels=nc,kernel_size=(3,3),stride=1,padding=1)  #(nc) x 64 x 64
         
         self.upc1 = dcgan_upconv(nf*4*2, nf*4, stride=1) #(nf*4) x 16 x 16
-        self.upc2 = dcgan_upconv(nf*4*2, nf*2, stride=2) #(nf*2) x 32 x 32
+        self.upc2 = dcgan_upconv(nf*4*2, nf*2, stride=1) #(nf*2) x 32 x 32
         self.upc3 = dcgan_upconv(nf*2*2, nf*2, stride=1) #(nf*2) x 32 x 32
         self.upc4 = dcgan_upconv(nf*2*2, nf, stride=1)   #(nf) x 64 x 64
         self.upc5 = dcgan_upconv(nf*2, int(nf/2), stride=1)   #(nf/2) x 64 x 64
@@ -257,7 +262,6 @@ class image_decoder(nn.Module):
         d4 = self.upc4(torch.cat([d3, h3], dim=1))   #(nf) x 64 x 64
         d5 = self.upc5(torch.cat([d4, h2], dim=1))   #(nf/2) x 64 x 64
         d6 = self.upc6(torch.cat([d5, h1], dim=1))   #(nc) x 64 x 64
-
         return d6
 
 
@@ -265,8 +269,6 @@ class image_decoder(nn.Module):
 class EncoderRNN(torch.nn.Module):
     def __init__(self,phycell,convlstm, ):
         super(EncoderRNN, self).__init__()
-#         self.l1 = nn.Linear(36*99, 64*64)
-#         self.l2 = nn.Linear(64*64, 36*99)
         
         self.image_cnn_enc = image_encoder() # image encoder 64x64x1 -> 16x16x64
         self.image_cnn_dec = image_decoder() # image decoder 16x16x64 -> 64x64x1
@@ -275,24 +277,14 @@ class EncoderRNN(torch.nn.Module):
         self.convlstm = convlstm
 
     def forward(self, input, first_timestep=False):
-        
-         # Casting the tensor into encoder's default input shape
-#         input = input.view(-1, input.shape[1], 36*99) 
-#         input = self.l1(input).view(-1, input.shape[1], 64, 64)
-        
-        encoded_image, skip = self.image_cnn_enc(input)
 
+        encoded_image, skip = self.image_cnn_enc(input)
         hidden1, output1 = self.phycell(encoded_image, first_timestep)
         hidden2, output2 = self.convlstm(encoded_image, first_timestep)
 
         concat = output1[-1] + output2[-1]
 
         output_image =  self.image_cnn_dec([concat,skip])
-        
-#         output_image = output_image.view(-1, output_image.shape[1], 64*64)
-#         output_image = self.l2(output_image)
-#         output_image = output_image.view(-1, output_image.shape[1], 36, 99)
-    
         return output_image
     
             
@@ -503,7 +495,5 @@ class PhyDNet(Module):
                 loss += self.criterion(m, self.constraints.to(device)) # constrains is a precomputed matrix
 
         out_images = torch.stack(output_images, dim=1)
-        # out_images = torch.sigmoid(out_images) if self.sigmoid else out_images
-        out_images = nn.LeakyReLU(0.2)(output_images)
-
+        out_images = torch.sigmoid(out_images) if self.sigmoid else out_images
         return out_images, loss
