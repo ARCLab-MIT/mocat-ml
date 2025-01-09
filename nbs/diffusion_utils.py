@@ -41,12 +41,12 @@ def plot(lkb, pred, target, save_to, vmin=None, vmax=None):
     axs[0, 2].set_title('Target')
     fig.colorbar(im, ax=axs[0, :3])
 
-    loss_im = axs[0, 4].imshow(np.abs(pred-target), cmap = 'Blues', aspect = 'auto', vmin=vmin, vmax=vmax)
-    axs[0, 4].set_title(f'Absolute diff mean: {round(torch.mean(torch.abs(pred-target)).item(), 2)} | max: {round(torch.max(torch.abs(pred-target)).item(), 2)}')
-    fig.colorbar(loss_im, ax=axs[0, 4])
+    loss_im = axs[0, 3].imshow(np.abs(pred-target), cmap = 'Blues', aspect = 'auto', vmin=vmin, vmax=vmax)
+    axs[0, 3].set_title(f'Absolute diff mean: {round(torch.mean(torch.abs(pred-target)).item(), 2)} | max: {round(torch.max(torch.abs(pred-target)).item(), 2)}')
+    fig.colorbar(loss_im, ax=axs[0, 3])
 
-    axs[0, 5].hist(np.abs(pred-target).flatten(), bins=200) 
-    axs[0, 5].set_title('Distribution of Absolute Difference Values')
+    axs[0, 4].hist(np.abs(pred-target).flatten(), bins=200) 
+    axs[0, 4].set_title('Distribution of Absolute Difference Values')
 
     fig.savefig(save_to)    
     plt.close()

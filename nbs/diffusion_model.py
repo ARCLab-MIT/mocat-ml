@@ -7,10 +7,8 @@ from torch.amp import autocast, GradScaler
 import fastai
 from fastai.data.transforms import RandomSplitter
 
-import denoising_diffusion_pytorch
-from denoising_diffusion_pytorch import Unet, GaussianDiffusion
-from denoising_diffusion_pytorch.attend import Attend
-from ema_pytorch import EMA
+import diffusion
+from diffusion import Unet, GaussianDiffusion
 
 import copy, logging, argparse, wandb, datetime, gc, json, random, math
 from tqdm import tqdm
@@ -58,7 +56,7 @@ def train(config):
     # wandb.watch(model, log=None)
 
     date, c = '{date:%Y-%m-%d_%H:%M:%S}'.format(date=datetime.now()), config
-    save_to = f"diffusion_results/{date}_l{c.lookback}_s{c.stride}_ds{c.ds}_loss_{c.loss}_bs{c.bs}_avg_{c.average}_log_{c.log}_norm_{c.normalize}"
+    save_to = f"results/diffusion/{date}_l{c.lookback}_s{c.stride}_ds{c.ds}_loss_{c.loss}_bs{c.bs}_avg_{c.average}_log_{c.log}_norm_{c.normalize}"
     save_to += f"_unet{c.unet_size}_dim{c.unet_dim}"
 
     if not os.path.exists(save_to):
