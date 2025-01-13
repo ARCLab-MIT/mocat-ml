@@ -21,6 +21,8 @@ gifs
 nbs/mocat-ml.code-workspace
 .gitignore
 nbs/config
+nbs/create_gifs
+nbs/results
 
 # Ignore the content of the folders starting with Trash-
 .Trash-*/
