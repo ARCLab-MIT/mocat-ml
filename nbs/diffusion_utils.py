@@ -1,9 +1,7 @@
-from matplotlib import pyplot as plt    
 import numpy as np
-import networkx as nx
-from matplotlib.animation import FuncAnimation, PillowWriter 
 import torch
-import torch.nn as nn
+from matplotlib import pyplot as plt    
+from matplotlib.animation import FuncAnimation
 
 def unnormalize_zero_to_one(x, max_val, min_val):
     return (x * (max_val - min_val)) + min_val
@@ -52,18 +50,18 @@ def plot(lkb, pred, target, save_to, vmin=None, vmax=None):
     plt.close()
 
 
-def make_and_save_gif(preds, savename, vmin, vmax, stride=10):
+def make_and_save_gif(target_preds, savename, vmin, vmax, stride=10):
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    im = ax.imshow(preds[0,:,:], aspect='auto', vmin=vmin, vmax=vmax)
+    im = ax.imshow(target_preds[0,:,:], aspect='auto', vmin=vmin, vmax=vmax)
     fig.colorbar(im, ax=ax)
 
     def animate(i, im, fig):
         fig.suptitle(f'Forecast iteration {i} target|prediction')
-        im.set_array(preds[stride*i,:, :])  # Update data
+        im.set_array(target_preds[stride*i,:, :])  # Update data
         return im,
 
-    ani = FuncAnimation(fig, animate, frames=preds.shape[0]//stride, fargs=(im, fig))
+    ani = FuncAnimation(fig, animate, frames=target_preds.shape[0]//stride, fargs=(im, fig))
     
     # Save the animation as a gif file
     ani.save(savename, writer='imagemagick', fps=20)

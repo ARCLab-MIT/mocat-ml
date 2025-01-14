@@ -6,7 +6,6 @@ convert_uuids_to_indices()
 from mocatml.data import *
 from mocatml.models.utils import *
 from mocatml.models.conv_rnn import *
-from mygrad import sliding_window_view
 import os, h5py, torch
 import numpy as np
 
@@ -22,7 +21,7 @@ import matplotlib.pyplot as plt
 KEYS=["comb_Am_inc", "comb_Am_ra", "comb_Am_rp", "comb_inc_ra", "comb_inc_rp", "comb_ra_rp"]
 
 def get_dataset(ds_name, config):  
-    path = f'{config.data.path}/TLE_density_all_{ds_name}.mat'
+    path = f'{config.data.path}/TLE_density_all_{ds_name}.mat' # Use absolute path 
     mat = h5py.File(path, 'r')
     data = np.array(mat[config.key])[:, :config.sel_steps]
     if config.sample:

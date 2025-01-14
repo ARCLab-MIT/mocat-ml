@@ -29,9 +29,9 @@ from ema_pytorch import EMA
 
 from accelerate import Accelerator
 
-from denoising_diffusion_pytorch.attend import Attend
+from diffusion.attend import Attend
 
-from denoising_diffusion_pytorch.version import __version__
+from diffusion.version import __version__
 
 # constants
 

@@ -1,17 +1,10 @@
 import torch, os
-from torch import optim
 import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
-from torch.amp import autocast, GradScaler
 
 import fastai
-from fastai.data.transforms import RandomSplitter
-
-import diffusion
 from diffusion import Unet, GaussianDiffusion
 
-import copy, logging, argparse, wandb, datetime, gc, json, random, math
-from tqdm import tqdm
+import argparse, wandb, datetime, random, math
 import numpy as np
 import matplotlib.pyplot as plt
 from utils import *

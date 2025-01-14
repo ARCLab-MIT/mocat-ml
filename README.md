@@ -13,13 +13,14 @@ to make this solution better.
 
 # Required module #
 
-Python, numpy, fastai, tsai
+python, numpy, fastai, tsai, h5py, torch
 
 
 # Installation #
 
-
- - pip install -e
+ - conda create --name env_name python=3.12.8
+ - conda activate env_name
+ - pip install -r requirements.txt
 
 
 # Related works #

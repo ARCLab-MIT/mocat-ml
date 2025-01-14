@@ -7,18 +7,16 @@ from mocatml.data import *
 from mocatml.models.utils import *
 from mocatml.models.conv_rnn import *
 from tsai.imports import my_setup
-from tsai.utils import yaml2dict, dict2attrdict
-from fastai.callback.schedule import valley, steep
-from mygrad import sliding_window_view
+from tsai.utils import yaml2dict
 from fastai.callback.wandb import WandbCallback
-import wandb, json, argparse, os, torch, time
+import wandb, json, argparse, os, torch, random, datetime
 import numpy as np
 
 from loss_functions import *
 from utils import *
+from diffusion_utils import make_and_save_gif
 
 my_setup()
-
 
 def train_on_dataset(ds_name, config):
     # only implemented for convgru (add more architectures)
@@ -36,10 +34,72 @@ def train_on_dataset(ds_name, config):
     
     # training 
     print("MODEL SIZE: ", get_n_params(learn), "\n")
-
     learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
 
-    plot_preds(learn, config, X, X_sw, save_folder=config.save_folder)
+    print("Training DONE!")
+    do_long_term_prediction(learn, config, X, X_sw, splits)
+    return learn 
+
+
+def do_long_term_prediction(learn, config, X, X_sw, splits):
+    #TODO implemented for only case when gap is zero
+    
+    # Getting random simulation run from validation set
+    idx = random.choice(splits[1])
+    n_iter = 2436//(config.lookback  + config.gap) - 1
+
+    ds = DensityData(X[idx:idx+1], lbk=config.lookback, h=config.horizon, gap=config.gap)
+    tl = TfmdLists(range(len(ds)), DensityTupleTransform(ds))
+    dl = TfmdDL(tl, bs=learn.dls.valid.bs)
+
+    date, c = '{date:%Y-%m-%d_%H:%M:%S}'.format(date=datetime.now()), config
+    save_to = f"results/convgru/{date}_l{c.lookback}_s{c.stride}_ds{c.ds}_loss_{c.loss}_bs{c.bs}_sample_{c.sample}"
+    save_path = f"{save_to}/long_term_prediction_after_{c.n_epoch+1}_epochs"
+
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    inp, p, t = learn.get_preds(dl=dl, with_input=True)
+    ds = dl.ds
+    losses = [learn.loss_func(p,t).item()]
+    predictions = [torch.vstack(inp+p)]
+    for iter in range(n_iter-1):
+        data_copy = ds.data[:,(iter+1)*(ds.lbk+ds.gap):\
+                                 (iter+1)*(ds.lbk+ds.gap) + ds.lbk + ds.h].copy()
+        
+        ds_copy = DensityData(data_copy, lbk=ds.lbk, h=ds.h, gap=ds.gap)
+        tl = TfmdLists(range(len(ds_copy)), DensityTupleTransform(ds_copy))
+        # Save the targets before replacing data
+        t = stack_density_list_as_preds_targs([y for _,y in tl])
+        # Replace the first inputs of the dataset with the predictions
+        p_dseqs = [DensitySeq.from_preds_or_targs(p, i, to_array=True) \
+                   for i in range(len(p[0]))]
+        
+        preds_data = np.stack(p_dseqs).squeeze()
+        ds_copy.data[:,:ds_copy.lbk] = preds_data
+        dl_new = dl.new(TfmdLists(range(len(ds_copy)), 
+                                  DensityTupleTransform(ds_copy)))
+        p,_ = learn.get_preds(dl=dl_new, with_input=False)
+        predictions.append(torch.vstack(p))
+        losses.append(learn.loss_func(p,t).item())
+    
+    predictions = torch.squeeze(torch.vstack(predictions), dim=1)
+    target_pred = torch.cat((torch.tensor(X[idx][:min(predictions.shape[0], 2436)]), predictions), 2)
+
+    vmin, vmax = torch.min(target_pred), torch.max(target_pred)
+    make_and_save_gif(target_pred, f"{save_path}/predictions.gif", vmin, vmax)
+
+    plt.figure(figsize=(8, 5))  
+    plt.plot(losses, label='Loss', color='blue')
+    plt.xlabel('Forecast Iteration')
+    plt.ylabel(f'Loss ({config.loss})')
+    plt.title('Loss Evolution During Long Term Prediction')
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+    plt.legend()
+    plt.savefig(save_path + "/losses.png")
+    plt.close()
+
+    # plot_preds(learn, config, X, X_sw, save_folder=config.save_folder)
     return learn
 
 
@@ -60,7 +120,6 @@ if __name__ == "__main__":
     parser.add_argument("--key", type = str, default = 'comb_Am_rp')
     parser.add_argument("--loss", type = str, default = 'mae')
     parser.add_argument("--sample", type = int, default = 0) # whether or not to sample to 32x32
-
 
     # Set defaults 
     args = parser.parse_args()
