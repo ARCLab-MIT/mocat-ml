@@ -338,7 +338,6 @@ def icnr_init(x, scale=2, init=nn.init.kaiming_normal_):
     k = k.contiguous().view([nf,ni,d1,d2,d3,d4]).transpose(0, 1)
     return k
 
-# %% ../nbs/01_layers.ipynb 104
 class PixelShuffle_ICNR4d(nn.Sequential):
     "Upsample by `scale` from `ni` filters to `nf` (default `ni`), using `nn.PixelShuffle`."
     def __init__(self, ni, nf=None, scale=2, blur=False, norm_type=NormType.Weight, act_cls=defaults.activation):
