@@ -18,9 +18,9 @@ from diffusion_utils import make_and_save_gif
 
 my_setup()
 
-def train_on_dataset(ds_name, config):
+def train_on_dataset(ds_list, config):
     # only implemented for convgru (add more architectures)
-    dls, splits, X, X_sw = get_dataloader(ds_name, config)
+    dls, splits, Xs  = get_dataloader_from_dslist(ds_list, config)
     loss_func, metrics = get_loss_func_and_metrics(config)
 
     # model setup
@@ -32,32 +32,42 @@ def train_on_dataset(ds_name, config):
     learn.splits = splits # This is needed for the evaluation notebook
     lr_max = config.lr_max if config.lr_max is not None else learn.lr_find()
     
+
     # training 
     print("MODEL SIZE: ", get_n_params(learn), "\n")
     learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
-
     print("Training DONE!")
-    do_long_term_prediction(learn, config, X, X_sw, splits)
+
+    date, c = '{date:%Y-%m-%d_%H:%M:%S}'.format(date=datetime.now()), config
+    save_to = f"results/convgru/{date}_l{c.lookback}_s{c.stride}_ds_{c.ds_list}_loss_{c.loss}_bs{c.bs}_sample_{c.sample}"
+    save_path = f"{save_to}/long_term_prediction_after_{c.n_epoch}_epochs"
+    
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    plt.figure(figsize=(8, 5))  
+    learn.recorder.plot_loss(skip_start=0, with_valid=True)
+    plt.ylabel('Loss')
+    plt.xlabel('Steps')
+    plt.title('Training and Validation loss')
+    plt.savefig(save_to + f"/training_val_loss.png")
+    plt.close()
+
+    for ds_name, X, split in zip(ds_list, Xs, splits):
+        do_long_term_prediction(learn, config, ds_name, X, split, save_path)
     return learn 
 
 
-def do_long_term_prediction(learn, config, X, X_sw, splits):
+def do_long_term_prediction(learn, config, ds_name, X, split, save_path):
     #TODO implemented for only case when gap is zero
     
     # Getting random simulation run from validation set
-    idx = random.choice(splits[1])
+    idx = random.choice(split[1])
     n_iter = 2436//(config.lookback  + config.gap) - 1
 
     ds = DensityData(X[idx:idx+1], lbk=config.lookback, h=config.horizon, gap=config.gap)
     tl = TfmdLists(range(len(ds)), DensityTupleTransform(ds))
     dl = TfmdDL(tl, bs=learn.dls.valid.bs)
-
-    date, c = '{date:%Y-%m-%d_%H:%M:%S}'.format(date=datetime.now()), config
-    save_to = f"results/convgru/{date}_l{c.lookback}_s{c.stride}_ds{c.ds}_loss_{c.loss}_bs{c.bs}_sample_{c.sample}"
-    save_path = f"{save_to}/long_term_prediction_after_{c.n_epoch+1}_epochs"
-
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
 
     inp, p, t = learn.get_preds(dl=dl, with_input=True)
     ds = dl.ds
@@ -87,7 +97,7 @@ def do_long_term_prediction(learn, config, X, X_sw, splits):
     target_pred = torch.cat((torch.tensor(X[idx][:min(predictions.shape[0], 2436)]), predictions), 2)
 
     vmin, vmax = torch.min(target_pred), torch.max(target_pred)
-    make_and_save_gif(target_pred, f"{save_path}/predictions.gif", vmin, vmax)
+    make_and_save_gif(target_pred, f"{save_path}/{ds_name}_predictions.gif", vmin, vmax, n_iter)
 
     plt.figure(figsize=(8, 5))  
     plt.plot(losses, label='Loss', color='blue')
@@ -96,10 +106,9 @@ def do_long_term_prediction(learn, config, X, X_sw, splits):
     plt.title('Loss Evolution During Long Term Prediction')
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.legend()
-    plt.savefig(save_path + "/losses.png")
+    plt.savefig(save_path + f"/{ds_name}_losses.png")
     plt.close()
 
-    # plot_preds(learn, config, X, X_sw, save_folder=config.save_folder)
     return learn
 
 
@@ -108,7 +117,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "Checking how model generalizes")
 
     # Data settings 
-    parser.add_argument("--ds", type = str, default = "x8x8", help = "dataset to train on")     
+    parser.add_argument("--ds_list", nargs='+', default = ["x3x3", "x4x4", "x5x5", "x6x6", "x8x8"], help = "datasets to train on")  
     parser.add_argument("--model", type = str, default = "convgru", help = "architecture to use")
     parser.add_argument("--horizon", type = int, default = 4) 
     parser.add_argument("--lookback", type = int, default = 4) 
@@ -120,7 +129,8 @@ if __name__ == "__main__":
     parser.add_argument("--key", type = str, default = 'comb_Am_rp')
     parser.add_argument("--loss", type = str, default = 'mae')
     parser.add_argument("--sample", type = int, default = 0) # whether or not to sample to 32x32
-
+    parser.add_argument("--log", type = int, default = 0)  # whether or not to train on log(N)
+    
     # Set defaults 
     args = parser.parse_args()
     arg_dict = vars(args)
@@ -132,7 +142,7 @@ if __name__ == "__main__":
     config = AttrDict(config_base)
     
     config.partial_loss = [0] if args.partial_loss == 1 else None
-    for key in ['ds', 'horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss', 'sample']:
+    for key in ['ds_list', 'horizon', 'lookback', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss', 'sample']:
         config[key] = arg_dict[key]
 
     if config['loss'] == 'mbd':
@@ -140,39 +150,6 @@ if __name__ == "__main__":
 
     print("CONFIG \n", json.dumps(config, indent=4))
 
-    name = f"{args.ds}/n_epoch_{config.n_epoch}_sample_{config.sample}_hor_lkb_{config.horizon}_str_{config.stride}_bs_{config.bs}"
-    if config.partial_loss is None:
-        if config['loss'] != 'mbd':
-            save_folder = f"plots/{config.loss}/{name}/" 
-        else: 
-            save_folder = f"plots/mbd_alpha_{config.alpha}/{name}/"
-    else:
-        if config['loss'] != 'mbd':
-            save_folder = f"plots/{config.loss}/{name}_partial_1/"
-        else:
-            save_folder = f"plots/mbd_alpha_{config.alpha}/{name}_partial_1/"
-
-    config['save_folder'] = save_folder
-
     # # Training
-    learn = train_on_dataset(args.ds, config)
-
-
-    # # Loss plot
-    # path = f'{config.save_folder}/loss/'
-    # if not os.path.exists(path):
-    #     os.makedirs(path)
-
-
-    # import matplotlib.pyplot as plt
-
-    # for i in [0, 0.5, 0.75, 0.9]:
-    #     num_epochs_toshow = config.n_epoch - int(i*config.n_epoch)
-    #     fig, ax = plt.subplots()
-    #     skip_start = int(len(learn.recorder.losses) * i)
-    #     plot_loss(learn.recorder, skip_start=skip_start, ax=ax)
-    #     ax.set_title('learning curve full' if skip_start == 0 else f'learning curve last {num_epochs_toshow} epochs')
-    #     name = 'full' if i==0 else f'last_{num_epochs_toshow}_epochs'
-    #     plt.savefig(f'{path}{name}.png')
-    #     plt.show()
-
+    print(args.ds_list)
+    learn = train_on_dataset(args.ds_list, config)

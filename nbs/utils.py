@@ -14,7 +14,7 @@ from torchvision import transforms
 
 from loss_functions import *
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, ConcatDataset
 import matplotlib.pyplot as plt 
 
 
@@ -36,6 +36,7 @@ def get_dataset(ds_name, config):
         data = np.array(data.reshape(num_sim, timesteps, 32, 32))
         print(data.shape)
 
+    data = data[:50] # only use 20 simulations from the dataset
     data_sw = np.lib.stride_tricks.sliding_window_view(data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
     data_sw = data_sw.transpose(0,1,4,2,3)
     data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
@@ -65,7 +66,41 @@ def get_dataloader(dataset, config):
                         config.normalize else None,
                         num_workers=config.num_workers)
     
-    return dls, splits, data, data_sw
+    return dls, splits, data 
+
+
+
+def get_dataloader_from_dslist(ds_list, config):
+    train_dls, valid_dls, splits, Xs = [], [], [], []
+    for ds in ds_list:
+        X, X_sw = get_dataset(ds, config)
+        split = RandomSplitter()(X) #valid_pct=0.2,
+        ds = DensityData(X_sw, lbk=config.lookback, h=config.horizon, gap=config.gap)
+        
+        samples_per_simulation = X_sw.shape[0]//(X.shape[0])
+        train_idxs = calculate_sample_idxs(split[0], samples_per_simulation)
+        valid_idxs = calculate_sample_idxs(split[1], samples_per_simulation)
+
+        print(X.shape, X_sw.shape)
+
+        train_tl = TfmdLists(train_idxs, DensityTupleTransform(ds))
+        valid_tl = TfmdLists(valid_idxs, DensityTupleTransform(ds))
+
+        train_dls.append(train_tl)
+        valid_dls.append(valid_tl)
+        splits.append(split)
+        Xs.append(X)
+
+    train = np.concatenate([X[split[0]] for X, split in zip(Xs, splits)], axis=0)   
+    mocat_stats = (np.mean(train), np.std(train))
+
+    train, valid = ConcatDataset(train_dls), ConcatDataset(valid_dls)
+    dls = DataLoaders.from_dsets(train, valid, bs=config['bs'], device=default_device(),
+                        after_batch=[Normalize.from_stats(*mocat_stats)] if \
+                        config.normalize else None,
+                        num_workers=config.num_workers)
+
+    return dls, splits, Xs
 
 
 
