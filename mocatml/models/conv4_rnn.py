@@ -206,7 +206,6 @@ class Conv4Layer(nn.Sequential):
         super().__init__(*layers)
 
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 7
 class Conv4GRU_cell(Module):
     def __init__(self, in_ch, out_ch, ks=3, debug=False):
         self.in_ch = in_ch
@@ -247,7 +246,7 @@ class Conv4GRU_cell(Module):
     def __repr__(self): return f'ConvGRU_cell(in={self.in_ch}, out={self.out_ch}, ks={self.ks})'
     def initHidden(self, bs, ch, d1, d2, d3, d4): return one_param(self).new_zeros(bs, ch, d1, d2, d3, d4)
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 16
+
 class TimeDistributed(Module):
     "Applies a module over tdim identically for each step" 
     def __init__(self, module, low_mem=False, tdim=1):
@@ -283,8 +282,6 @@ class TimeDistributed(Module):
     def __repr__(self):
         return f'TimeDistributed({self.module})'
 
-
-# %% ../../nbs_lib/models.conv_rnn.ipynb 24
 class Encoder4d(Module):
     def __init__(self, n_in=1, szs=[16,64,96], ks=3, rnn_ks=5, act=nn.ReLU, norm=None, coord_conv=False, debug=False):
         self.debug = debug
@@ -378,7 +375,6 @@ class PixelShuffle4d(nn.Module):
         return output.view(batch_size, nOut, a1, a2, a3, a4)
 
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 28
 class UpsampleBlock(Module):
     "A quasi-UNet block, using `PixelShuffle_ICNR upsampling`."
     @delegates(Conv4Layer.__init__)
@@ -412,7 +408,6 @@ class UpsampleBlock(Module):
         if self.debug: print(f'up_out: {up_out.shape}')
         return self.conv2(self.conv1(up_out))
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 30
 import torch
 import torch.nn.functional as F
 
@@ -512,7 +507,6 @@ class Decoder4d(Module):
         output_adjusted = conditional_crop_pad(output, target_height, target_width)
         return output_adjusted
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 36
 def _unbind_densities(x, dim=1):
     "only unstack densities"
     if isinstance(x, torch.Tensor): 
@@ -520,7 +514,6 @@ def _unbind_densities(x, dim=1):
             return x.unbind(dim=dim)
     return x
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 38
 class Stack4Unstack(Module):
     "Stack together inputs, apply module, unstack output"
     def __init__(self, module, dim=1):
@@ -536,7 +529,7 @@ class Stack4Unstack(Module):
             return [self.unbind_densities(output, dim=self.dim) for output in outputs]
         else: return outputs.unbind(dim=self.dim)
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 39
+
 class Simple4Model(Module):
     "Simple Encoder/Decoder module"
     def __init__(self, n_in=1, n_out=1, szs=[16,64,96], ks=3, rnn_ks=5, 
@@ -553,7 +546,6 @@ class Simple4Model(Module):
             dec_in = enc_outs[-1]
         return self.decoder(dec_in, h, enc_outs)
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 44
 # def StackLoss(loss_func=MSELossFlat(), axis=-1):
 #     def _inner_loss(x,y):
 #         x = torch.cat(x, axis)
@@ -561,7 +553,7 @@ class Simple4Model(Module):
 #         return loss_func(x,y)
 #     return _inner_loss
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 45
+
 class StackLoss(nn.Module):
     def __init__(self, loss_func=MSELossFlat(), axis=-1):
         super().__init__()
@@ -573,7 +565,6 @@ class StackLoss(nn.Module):
         y = torch.cat(y, self.axis)
         return self.loss_func(x, y)
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 51
 class PartialStackLoss(StackLoss):
     """StackLoss but only in a subset of the elements of the list"""
     @delegates(StackLoss.__init__)
@@ -586,7 +577,6 @@ class PartialStackLoss(StackLoss):
                                [y[i] for i in self.idxs],
                                **kwargs)
 
-# %% ../../nbs_lib/models.conv_rnn.ipynb 54
 class MultiImageDice(Metric):
     "Dice coefficient metric for binary target in segmentation"
     def __init__(self, axis=1): self.axis = axis
