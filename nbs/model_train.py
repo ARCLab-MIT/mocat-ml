@@ -130,6 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("--loss", type = str, default = 'mae')
     parser.add_argument("--sample", type = int, default = 0) # whether or not to sample to 32x32
     parser.add_argument("--log", type = int, default = 0)  # whether or not to train on log(N)
+    parser.add_argument("--average", type = int, default = 0) # whether or not to use averaging 
     
     # Set defaults 
     args = parser.parse_args()
@@ -153,3 +154,4 @@ if __name__ == "__main__":
     # # Training
     print(args.ds_list)
     learn = train_on_dataset(args.ds_list, config)
+

@@ -23,6 +23,7 @@ nbs/mocat-ml.code-workspace
 nbs/config
 nbs/create_gifs
 nbs/results
+nbs/sumiya.code-workspace
 
 # Ignore the content of the folders starting with Trash-
 .Trash-*/
