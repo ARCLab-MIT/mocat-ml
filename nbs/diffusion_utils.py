@@ -50,20 +50,39 @@ def plot(lkb, pred, target, save_to, vmin=None, vmax=None):
     plt.close()
 
 
-def make_and_save_gif(target_preds, savename, vmin, vmax, n_iter, stride=10):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    im = ax.imshow(target_preds[0,:,:], aspect='auto', vmin=vmin, vmax=vmax)
-    fig.colorbar(im, ax=ax)
+def make_and_save_gif(target, preds, config, savename, vmin, vmax, n_iter, stride=10):
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4))  # Create a figure with three subplots
 
-    def animate(i, im, fig):
-        fig.suptitle(f'Forecast iteration {round(i * stride/2436 * n_iter)} year: {round(i*stride/2436 * 100)} MOCAT-MC | MOCAT-ML')
-        im.set_array(target_preds[stride*i,:, :])  # Update data
-        return im,
+    # Create images for the first and second distributions
+    im1 = ax1.imshow(target[0, :, :], aspect='auto', vmin=vmin, vmax=vmax)
+    im2 = ax2.imshow(preds[0, :, :], aspect='auto', vmin=vmin, vmax=vmax)
 
-    ani = FuncAnimation(fig, animate, frames=target_preds.shape[0]//stride, fargs=(im, fig))
-    
-    # Save the animation as a gif file
+    # Add colorbars
+    fig.colorbar(im1, ax=ax1)
+    fig.colorbar(im2, ax=ax2)
+
+    ax1.set_title("MOCAT-MC")
+    ax2.set_title("MOCAT-ML")
+    ax3.set_title("Model Configuration")
+
+    # Display model configuration in the third subplot
+    model_config = {key:config[key] for key in ['launch_rate', 'init_pop', 'horizon', 'lookback', 'gap', 'stride', 'bs', 'n_epoch', 'key', 'loss', 'sample', 'log', 'average', 'metric']}
+    config_text = "\n\n" + "\n".join([f"{key}: {value}" for key, value in model_config.items()])
+    ax3.text(0.05, 0.5, config_text, wrap=True, fontsize=8) 
+    ax3.axis('off') 
+
+    def animate(i):
+        im1.set_array(target[i * stride, :, :])
+        im2.set_array(preds[i * stride, :, :])
+
+        # Update the title with the current iteration and year
+        fig.suptitle(f'Forecast iteration {round(i * stride / 2436 * n_iter)} year: {round(i * stride / 2436 * 100)}')
+        return im1, im2, fig
+
+    # Create the animation
+    ani = FuncAnimation(fig, animate, frames=target.shape[0] // stride, interval=20, blit=True)
+
+    # Save the animation as a GIF
     ani.save(savename, writer='imagemagick', fps=20)
     plt.close()
 

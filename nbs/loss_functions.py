@@ -19,7 +19,15 @@ class MAPELoss(nn.Module):
         absolute_diff = torch.abs(y - y_hat)
         percentage_error = torch.div(absolute_diff, torch.clamp(torch.abs(y), min=self.eps))
         return torch.mean(percentage_error)
+    
 
+class SMAPELoss(nn.Module):
+    def __init__(self):
+        super(SMAPELoss, self).__init__()
+
+    def forward(self, y, y_hat):
+        percentage_error = torch.div(torch.abs(y - y_hat), torch.abs(y) + torch.abs(y_hat)) 
+        return torch.mean(torch.nan_to_num(percentage_error, 1))
 
 class MBDLoss(nn.Module):
     def __init__(self, alpha):
@@ -58,6 +66,8 @@ def get_loss_func_and_metrics(config):
             loss_func = PartialStackLoss(config.partial_loss, loss_func=MAPELoss())
         if config['loss'] == 'rmsle':
             loss_func = PartialStackLoss(config.partial_loss, loss_func=RMSLELoss())
+        if config['loss'] == 'smape':
+            loss_func = PartialStackLoss(config.partial_loss, loss_func=SMAPELoss())
 
         full_loss = StackLoss()
         full_loss.__name__ = "full_loss"
@@ -76,6 +86,8 @@ def get_loss_func_and_metrics(config):
             loss_func =  StackLoss(MAPELoss())
         if config['loss'] == 'rmsle':
             loss_func = StackLoss(RMSLELoss())
-        metrics = []
 
+    if config['metric'] == 'smape':
+        metrics = [StackLoss(SMAPELoss())]
+        metrics[0].__name__ = "SMAPE"
     return loss_func, metrics

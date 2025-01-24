@@ -16,6 +16,7 @@ from loss_functions import *
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset, ConcatDataset
 import matplotlib.pyplot as plt 
+from matplotlib.animation import FuncAnimation
 
 
 KEYS=["comb_Am_inc", "comb_Am_ra", "comb_Am_rp", "comb_inc_ra", "comb_inc_rp", "comb_ra_rp"]
@@ -34,9 +35,18 @@ def get_dataset(ds_name, config):
         transformed_data = [transform(sample) for sample in data_reshaped]
         data = torch.stack(transformed_data, dim=0)
         data = np.array(data.reshape(num_sim, timesteps, 32, 32))
-        print(data.shape)
 
-    data = data[:50] # only use 20 simulations from the dataset
+    if config.average:
+        averages = []
+        for i in range(5):
+            x = np.expand_dims(np.mean(data[10*i:10*(i+1)], axis=0), 0)
+            averages.append(x)
+        data = np.vstack(averages)
+
+    if config.log:
+        data = np.log(data + 1)
+
+    # data = data[:20]  # only use 20 simulations from the dataset
     data_sw = np.lib.stride_tricks.sliding_window_view(data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
     data_sw = data_sw.transpose(0,1,4,2,3)
     data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
@@ -46,8 +56,6 @@ def get_dataset(ds_name, config):
 
 def get_dataloader(dataset, config):
     data, data_sw = get_dataset(dataset, config)
-    print(data_sw.shape, data.shape)
-    
     splits = RandomSplitter()(data) #valid_pct=0.2,
     ds = DensityData(data_sw, lbk=config.lookback, h=config.horizon, gap=config.gap)
     samples_per_simulation = data_sw.shape[0]//(data.shape[0])
@@ -72,8 +80,8 @@ def get_dataloader(dataset, config):
 
 def get_dataloader_from_dslist(ds_list, config):
     train_dls, valid_dls, splits, Xs = [], [], [], []
-    for ds in ds_list:
-        X, X_sw = get_dataset(ds, config)
+    for ds_name in ds_list:
+        X, X_sw = get_dataset(ds_name, config)
         split = RandomSplitter()(X) #valid_pct=0.2,
         ds = DensityData(X_sw, lbk=config.lookback, h=config.horizon, gap=config.gap)
         
@@ -81,7 +89,7 @@ def get_dataloader_from_dslist(ds_list, config):
         train_idxs = calculate_sample_idxs(split[0], samples_per_simulation)
         valid_idxs = calculate_sample_idxs(split[1], samples_per_simulation)
 
-        print(X.shape, X_sw.shape)
+        print(ds_name, X.shape, X_sw.shape)
 
         train_tl = TfmdLists(train_idxs, DensityTupleTransform(ds))
         valid_tl = TfmdLists(valid_idxs, DensityTupleTransform(ds))
@@ -95,13 +103,12 @@ def get_dataloader_from_dslist(ds_list, config):
     mocat_stats = (np.mean(train), np.std(train))
 
     train, valid = ConcatDataset(train_dls), ConcatDataset(valid_dls)
-    dls = DataLoaders.from_dsets(train, valid, bs=config['bs'], device=default_device(),
+    dls = DataLoaders.from_dsets(train, valid, bs=config.bs, device=default_device(),
                         after_batch=[Normalize.from_stats(*mocat_stats)] if \
                         config.normalize else None,
                         num_workers=config.num_workers)
 
     return dls, splits, Xs
-
 
 
 class MOCAT_Dataset(Dataset):
@@ -177,9 +184,6 @@ def get_dataloader_diffusion(config):
                 normalized_data[s][t] = normalized_data[s][t] * 2 - 1 # -1 to 1
 
         data = normalized_data
-
-    # if config.diff:
-        # data = np.diff(data, axis=1)
     
     data_sw = np.lib.stride_tricks.sliding_window_view(data, lkb + hrzn + gap, axis=1)[:,::stride,:]
     data_sw = data_sw.transpose(0,1,4,2,3)
@@ -321,7 +325,93 @@ def plot_preds(learn, config, X, X_sw, save_folder, years_to_plot = [1/6, 1, 2, 
         learn.show_preds_at(0, p=preds, t=targs, inp=inps, save=True, save_path = save_folder+f"{year}/", with_targets=True, 
                         with_input=True, start_epoch=(n_iter-1)*config.horizon,
                     titles=[title_input, title_pred, title_target])
-    
+        
+
+def plot_metrics(metric_scores_by_year, metric_scores_full, save_folder, stride=10):
+
+    # Example variables and evaluation metrics
+    launch_rates = sorted(list(set([int(l.split('x')[1]) for l in metric_scores_by_year])))[::-1]  # Columns
+    init_pops = sorted(list(set([int(l.split('x')[2]) for l in metric_scores_by_year])))        # Rows
+
+    for ii in range(10):
+        metrics = np.array([
+            [metric_scores_by_year[f'x{ip}x{lr}'][ii] for ip in init_pops] for lr in launch_rates
+        ])
+
+        # Create the heatmap
+        plt.figure(figsize=(8, 6))
+        heatmap = plt.imshow(metrics, cmap='Blues', aspect='auto')
+
+        # Add colorbar
+        plt.colorbar(heatmap)
+
+        # Add labels, title, and ticks
+        plt.title('SMAPE', fontsize=14)
+        plt.xlabel('Init population', fontsize=12)
+        plt.ylabel('Launch rate', fontsize=12)
+        plt.xticks(np.arange(len(init_pops)), init_pops, fontsize=10)
+        plt.yticks(np.arange(len(launch_rates)), launch_rates, fontsize=10)
+
+        # Annotate cells with metric values
+        for i in range(metrics.shape[0]):
+            for j in range(metrics.shape[1]):
+                plt.text(j, i, f'{metrics[i, j]:.3f}', ha='center', va='center', color='black')
+
+        # Show the plot
+        plt.tight_layout()
+        plt.savefig(save_folder+f'/SMAPE_year_{(ii+1)*10}.jpg')
+        plt.show()
+
+
+
+    # Create the heatmap gif
+    fig, ax = plt.subplots(figsize=(4, 4))
+
+    # Create images for the first and second distributions
+    metrics = np.array([
+        [metric_scores_full[f'x{ip}x{lr}'][0] for ip in init_pops] for lr in launch_rates
+    ])
+
+    n = len(metric_scores_full[f'x{init_pops[0]}x{launch_rates[0]}'])
+
+    # Create the heatmap
+    im1 = ax.imshow(metrics, cmap='Blues', aspect='auto')
+    fig.colorbar(im1, ax=ax)
+    ax.set_xlabel('Init population', fontsize=10)
+    ax.set_ylabel('Launch rate', fontsize=10)
+    ax.set_xticks(np.arange(len(init_pops)), init_pops, fontsize=10)
+    ax.set_yticks(np.arange(len(launch_rates)), launch_rates, fontsize=10)
+
+    # Initialize annotations
+    annotations = []
+    for i in range(metrics.shape[0]):
+        for j in range(metrics.shape[1]):
+            annotations.append(ax.text(j, i, f'{metrics[i, j]:.3f}', ha='center', va='center', color='black'))
+
+    # Define the update function
+    def update(frame):
+        """Update the heatmap and annotations for each animation frame."""
+        # Extract the data for the current frame
+        metrics = np.array([
+            [metric_scores_full[f'x{ip}x{lr}'][frame * stride] for ip in init_pops] for lr in launch_rates
+        ])
+
+        im1.set_array(metrics)
+
+        # Update text annotations
+        for i in range(metrics.shape[0]):
+            for j in range(metrics.shape[1]):
+                annotations[i * metrics.shape[1] + j].set_text(f'{metrics[i, j]:.3f}')
+        
+        fig.suptitle(f'SMAPE year: {round(frame * stride * 100 / n)}')
+        return [im1] + annotations + [fig]
+
+    # Create the figure and axis
+    ani = FuncAnimation(fig, update, frames=n//stride, interval=50, blit=True) 
+
+    # Save the animation as a GIF
+    ani.save(f'{save_folder}SMAPE_evolution.gif', writer='imagemagick', fps=20) 
+    plt.show()
 
 
 def save_results(config, lookback, horizon, preds, save_to, epoch, long_term=False, iter_num=None):
