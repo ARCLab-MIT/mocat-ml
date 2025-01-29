@@ -1,6 +1,6 @@
 bs: 32 # batch size
 data:
-    path: '/home/gridsan/ssarangerel/arclab_shared/mocatml_ds/'
+    path: '/home/gridsan/ssarangerel/orbitalrisk_MC/supercloud_runs/combined_ds_mocatml'
 device: 'cuda' # 'cpu' or 'cuda'
 gap: 0 # gap between the last step of the lookback and the first step of the horizon
 horizon: 4 # number of steps into the future

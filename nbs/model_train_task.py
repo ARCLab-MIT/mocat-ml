@@ -88,7 +88,7 @@ def get_dataloader(config, data, data_sw):
 
 
 def get_dataset(config):  
-    path = f'{config.data.path}/TLE_density_all_{config.ds}.mat'
+    path = f'{config.data.path}/{config.ds}/TLE_density_all.mat'
 
     mat = h5py.File(path, 'r')
     datas, data_sws = [], []

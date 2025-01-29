@@ -20,8 +20,12 @@ draft_nbs
 gifs
 nbs/mocat-ml.code-workspace
 .gitignore
-models/
 nbs/config
+nbs/create_gifs
+nbs/results
+nbs/sumiya.code-workspace
+nbs/models
+nbs/logs
 
 # Ignore the content of the folders starting with Trash-
 .Trash-*/
