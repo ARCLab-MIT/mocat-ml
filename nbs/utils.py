@@ -7,7 +7,7 @@ from mocatml.data import *
 from mocatml.models.utils import *
 from mocatml.models.conv_rnn import *
 from mygrad import sliding_window_view
-import os, h5py, torch
+import os, h5py, torch, json
 import numpy as np
 
 import torch
@@ -20,7 +20,7 @@ import torch.nn.functional as F
 KEYS=["comb_Am_inc", "comb_Am_ra", "comb_Am_rp", "comb_inc_ra", "comb_inc_rp", "comb_ra_rp"]
 
 def get_dataset(ds_name, config):  
-    path = f'{config.data.path}/TLE_density_all_{ds_name}.mat'
+    path = f'{config.data.path}/{ds_name}/TLE_density_all.mat'
 
     if config.downsample == 1:
         combined_data = np.zeros((50, 2436, len(KEYS), 36, 36))
@@ -178,6 +178,12 @@ def get_n_params(model):
             nn = nn*s
         pp += nn
     return pp
+
+
+def read_json(path):
+    with open(path, "r", encoding = "UTF-8") as f:
+        data = json.load(f)
+    return data
 
 
 def plot_preds(learn, config, X, X_sw, save_folder, years_to_plot = [1/6, 1, 2, 3, 4, 5, 10, 100]):

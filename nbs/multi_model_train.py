@@ -51,7 +51,38 @@ def train_on_dataset(ds_name, config):
     return models
 
 def evaluation(models, Xs, config):
-    
+    inp, p, t = self.get_preds(dl=dl, with_input=True, **kwargs)
+    #ds_copy = copy(dl.ds) # Useful to move the gap without changing the original ds
+    ds = dl.ds
+    if track_losses:
+        losses = [self.loss_func(p,t).item()]
+    for iter in range(n_iter-1):
+        data_copy = ds.data[:,(iter+1)*(ds.lbk+ds.gap):\
+                                 (iter+1)*(ds.lbk+ds.gap) + ds.lbk + ds.h].copy()
+        #ds_copy.data = ds_copy.data[:,(ds_copy.lbk+ds_copy.gap):] # Move 1 window forward
+        ds_copy = DensityData(data_copy, lbk=ds.lbk, h=ds.h, gap=ds.gap)
+        tl = TfmdLists(range(len(ds_copy)), DensityTupleTransform(ds_copy))
+        # Save the targets before replacing data
+        t = stack_density_list_as_preds_targs([y for _,y in tl])
+        # Replace the first inputs of the dataset with the predictions
+        p_dseqs = [DensitySeq.from_preds_or_targs(p, i, to_array=True) \
+                   for i in range(len(p[0]))]
+        preds_data = np.stack(p_dseqs).squeeze()
+        ds_copy.data[:,:ds_copy.lbk] = preds_data
+        dl_new = dl.new(TfmdLists(range(len(ds_copy)), 
+                                  DensityTupleTransform(ds_copy)))
+        p,_ = self.get_preds(dl=dl_new, with_input=False, **kwargs)
+        if track_losses:
+            losses.append(self.loss_func(p,t).item())
+    res  = [p, t]
+    if with_input: res = [inp] + res
+    if track_losses: 
+        losses = tensor(losses)
+        res = res + [losses]
+    return tuple(res)
+
+
+    #TODO pass the input through models
     for learn, X in zip(models, Xs):
         train_stats = (learn.dls.train.after_batch.mean, learn.dls.train.after_batch.std)
         ds_full = DensityData(X, lbk=config.lookback, h=config.horizon)
@@ -63,13 +94,8 @@ def evaluation(models, Xs, config):
         inps, preds, targs, losses = learn.get_preds_iterative(dl=dl_full, n_iter=n_iter, track_losses=True, with_input=True)   
 
         for i in [inps, preds, targs, losses]:
-            print(type(i))
-            try:
-                print(i.shape)
-            except:
-                print(len(i))
-
-            print("----------"*8)
+            pass
+            
 
     return 
 
