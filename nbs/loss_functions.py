@@ -27,7 +27,7 @@ class SMAPELoss(nn.Module):
 
     def forward(self, y, y_hat):
         percentage_error = torch.div(torch.abs(y - y_hat), torch.abs(y) + torch.abs(y_hat)) 
-        return torch.mean(torch.nan_to_num(percentage_error, 1))
+        return torch.mean(torch.nan_to_num(percentage_error, 0))
 
 class MBDLoss(nn.Module):
     def __init__(self, alpha):

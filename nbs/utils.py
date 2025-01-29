@@ -172,18 +172,18 @@ def get_dataloader_diffusion(config):
     if config.log:
         data = np.log(data + 1)
 
-    if config.normalize:
-        num_sim, num_timesteps, _, _ = data.shape
-        normalized_data = np.zeros_like(data)
-        max_value = np.max(data)
-        min_value = np.min(data)
-        for s in range(num_sim):
-            for t in range(num_timesteps):
-                timestep_data = data[s][t]
-                normalized_data[s][t] = (timestep_data - min_value) / (max_value - min_value) #0 to 1
-                normalized_data[s][t] = normalized_data[s][t] * 2 - 1 # -1 to 1
+    # if config.normalize:
+    #     num_sim, num_timesteps, _, _ = data.shape
+    #     normalized_data = np.zeros_like(data)
+    #     max_value = np.max(data)
+    #     min_value = np.min(data)
+    #     for s in range(num_sim):
+    #         for t in range(num_timesteps):
+    #             timestep_data = data[s][t]
+    #             normalized_data[s][t] = (timestep_data - min_value) / (max_value - min_value) #0 to 1
+    #             normalized_data[s][t] = normalized_data[s][t] * 2 - 1 # -1 to 1
 
-        data = normalized_data
+    #     data = normalized_data
     
     data_sw = np.lib.stride_tricks.sliding_window_view(data, lkb + hrzn + gap, axis=1)[:,::stride,:]
     data_sw = data_sw.transpose(0,1,4,2,3)
@@ -362,8 +362,6 @@ def plot_metrics(metric_scores_by_year, metric_scores_full, save_folder, stride=
         plt.savefig(save_folder+f'/SMAPE_year_{(ii+1)*10}.jpg')
         plt.show()
 
-
-
     # Create the heatmap gif
     fig, ax = plt.subplots(figsize=(4, 4))
 
@@ -410,7 +408,7 @@ def plot_metrics(metric_scores_by_year, metric_scores_full, save_folder, stride=
     ani = FuncAnimation(fig, update, frames=n//stride, interval=50, blit=True) 
 
     # Save the animation as a GIF
-    ani.save(f'{save_folder}SMAPE_evolution.gif', writer='imagemagick', fps=20) 
+    ani.save(f'{save_folder}/SMAPE_evolution.gif', writer='imagemagick', fps=20) 
     plt.show()
 
 

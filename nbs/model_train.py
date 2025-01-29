@@ -38,11 +38,14 @@ def train_on_dataset(ds_list, config):
     print("Training DONE!")
 
     date, c = '{date:%Y-%m-%d_%H:%M:%S}'.format(date=datetime.now()), config
-    save_to = f"results/convgru/init_pop_{c.init_pop}_launch_rate_{c.launch_rate}/{date}_l{c.lookback}_gap_{c.gap}_s{c.stride}_loss_{c.loss}_metric_{c.metric}_bs{c.bs}_sample_{c.sample}_log_{c.log}_average_{c.average}"
-    save_path = f"{save_to}/long_term_prediction_after_{c.n_epoch}_epochs"
+    ip, lr = [c.init_pop[0], c.init_pop[-1]], [c.launch_rate[0], c.launch_rate[-1]]
+    save_to = f"results/convgru/init_pop_{ip}_launch_rate_{lr}/{date}_l{c.lookback}_gap_{c.gap}_s{c.stride}_loss_{c.loss}_metric_{c.metric}_bs{c.bs}_sample_{c.sample}_log_{c.log}_average_{c.average}"
     
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
+    if not os.path.exists(save_to):
+        os.makedirs(save_to)
+        os.makedirs(save_to + '/predictions')
+        os.makedirs(save_to + '/losses')
+        os.makedirs(save_to + '/metrics')
 
     plt.figure(figsize=(8, 5))  
     learn.recorder.plot_loss(skip_start=0, with_valid=True)
@@ -54,15 +57,15 @@ def train_on_dataset(ds_list, config):
 
     metric_scores_by_year, metric_scores_full = {}, {}
     for ds_name, X, split in zip(ds_list, Xs, splits):
-        score_year, score_full = do_long_term_prediction(learn, config, ds_name, X, split, save_path)
+        score_year, score_full = do_long_term_prediction(learn, config, ds_name, X, split, save_to)
         metric_scores_by_year[ds_name] = score_year  
         metric_scores_full[ds_name] = score_full
 
-    plot_metrics(metric_scores_by_year, metric_scores_full, save_to+'/')
+    plot_metrics(metric_scores_by_year, metric_scores_full, save_to+'/metrics')
     return learn 
 
 
-def do_long_term_prediction(learn, config, ds_name, X, split, save_path): # only gap <= 0
+def do_long_term_prediction(learn, config, ds_name, X, split, save_to): # only gap <= 0
     if config.gap > 0:
         print("Only implemented for gap = 0")
         return
@@ -108,8 +111,7 @@ def do_long_term_prediction(learn, config, ds_name, X, split, save_path): # only
     if config.log:
         target, predictions = torch.exp(target)-1, torch.exp(predictions)-1
 
-    vmin, vmax = min([torch.min(target).item(), torch.min(predictions).item()]), max([torch.max(target).item(), torch.max(predictions).item()])
-    make_and_save_gif(target, predictions, config, f"{save_path}/{ds_name}_predictions.gif", vmin, vmax, n_iter)
+    make_and_save_gif(target, predictions, config, f"{save_to}/predictions/{ds_name}.gif")
 
     plt.figure(figsize=(8, 5))  
     plt.plot(losses, label='Loss', color='blue')
@@ -118,7 +120,7 @@ def do_long_term_prediction(learn, config, ds_name, X, split, save_path): # only
     plt.title('Loss Evolution During Long Term Prediction')
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.legend()
-    plt.savefig(save_path + f"/{ds_name}_losses.png")
+    plt.savefig(save_to + f"/losses/{ds_name}.png")
     plt.close()
 
      # plotting metric results
@@ -149,9 +151,9 @@ if __name__ == "__main__":
     parser.add_argument("--key", type = str, default = 'comb_Am_rp')
     parser.add_argument("--loss", type = str, default = 'mae')
     parser.add_argument("--sample", type = int, default = 1) # whether or not to sample to 32x32
-    parser.add_argument("--log", type = int, default = 1)  # whether or not to train on log(N)
+    parser.add_argument("--log", type = int, default = 0)  # whether or not to train on log(N)
     parser.add_argument("--average", type = int, default = 1) # whether or not to use averaging 
-    parser.add_argument("--normalize", type = int, default = 0) # whether or not to normalize from -1 to 1
+    # parser.add_argument("--normalize", type = int, default = 0) # whether or not to normalize from -1 to 1
     parser.add_argument("--metric", type = str, default = 'smape') 
 
     # Set defaults 

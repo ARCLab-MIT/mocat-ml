@@ -1,5 +1,5 @@
 import numpy as np
-import torch
+import torch, math
 from matplotlib import pyplot as plt    
 from matplotlib.animation import FuncAnimation
 
@@ -50,34 +50,41 @@ def plot(lkb, pred, target, save_to, vmin=None, vmax=None):
     plt.close()
 
 
-def make_and_save_gif(target, preds, config, savename, vmin, vmax, n_iter, stride=10):
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4))  # Create a figure with three subplots
-
+def make_and_save_gif(target, preds, config, savename, stride=10):
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(16, 4))  # Create a figure with three subplots
+    vmin, vmax = min([torch.min(target).item(), torch.min(preds).item()]), max([torch.max(target).item(), torch.max(preds).item()])
+    abs_diff = torch.abs(target-preds)  
+    n_iter = 2436//(config.lookback  + config.gap) - math.ceil(config.lookback/(config.lookback + config.gap))
+    
     # Create images for the first and second distributions
     im1 = ax1.imshow(target[0, :, :], aspect='auto', vmin=vmin, vmax=vmax)
     im2 = ax2.imshow(preds[0, :, :], aspect='auto', vmin=vmin, vmax=vmax)
+    im3 = ax3.imshow(abs_diff[0, :, :], aspect='auto', cmap='viridis', interpolation='nearest', vmin=torch.min(abs_diff).item(), vmax=torch.max(abs_diff).item())    
 
     # Add colorbars
     fig.colorbar(im1, ax=ax1)
     fig.colorbar(im2, ax=ax2)
+    fig.colorbar(im3, ax=ax3)
 
     ax1.set_title("MOCAT-MC")
     ax2.set_title("MOCAT-ML")
-    ax3.set_title("Model Configuration")
+    ax3.set_title("Absolute Difference")
+    ax4.set_title("Model Configuration")
 
     # Display model configuration in the third subplot
     model_config = {key:config[key] for key in ['launch_rate', 'init_pop', 'horizon', 'lookback', 'gap', 'stride', 'bs', 'n_epoch', 'key', 'loss', 'sample', 'log', 'average', 'metric']}
-    config_text = "\n\n" + "\n".join([f"{key}: {value}" for key, value in model_config.items()])
-    ax3.text(0.05, 0.5, config_text, wrap=True, fontsize=8) 
-    ax3.axis('off') 
+    config_text =  "\n\n" + "\n".join([f"{key}: {value}" for key, value in model_config.items()])
+    ax4.text(0.05, 0.3, config_text, fontsize=8) 
+    ax4.axis('off') 
 
     def animate(i):
         im1.set_array(target[i * stride, :, :])
         im2.set_array(preds[i * stride, :, :])
+        im3.set_array(abs_diff[i * stride, :, :])
 
         # Update the title with the current iteration and year
         fig.suptitle(f'Forecast iteration {round(i * stride / 2436 * n_iter)} year: {round(i * stride / 2436 * 100)}')
-        return im1, im2, fig
+        return im1, im2, im3, fig
 
     # Create the animation
     ani = FuncAnimation(fig, animate, frames=target.shape[0] // stride, interval=20, blit=True)
