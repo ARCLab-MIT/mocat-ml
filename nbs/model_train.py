@@ -32,10 +32,16 @@ def train_on_dataset(ds_list, config):
     learn.splits = splits # This is needed for the evaluation notebook
     lr_max = config.lr_max if config.lr_max is not None else learn.lr_find()
 
-    # training 
+    # Training
     print("MODEL SIZE: ", get_n_params(learn), "\n")
     learn.fit_one_cycle(config.n_epoch, lr_max=lr_max)
     print("Training DONE!")
+
+    # Saving model
+    if config.save_model:
+        learn.model_dir = config.tmp_folder
+        learn.export(f'{config.tmp_folder}/learner.pkl', pickle_protocol=4)
+
 
     date, c = '{date:%Y-%m-%d_%H:%M:%S}'.format(date=datetime.now()), config
     ip, lr = [c.init_pop[0], c.init_pop[-1]], [c.launch_rate[0], c.launch_rate[-1]]
@@ -180,3 +186,13 @@ if __name__ == "__main__":
 
     # Training
     learn = train_on_dataset(args.ds_list, config)    
+
+
+    def load_ml_model(model_path):
+        model = torch.load(model_path)
+        return model
+
+    def run_ml_model(model, data):
+        model.eval()
+        with torch.no_grad():
+            return model(data)
