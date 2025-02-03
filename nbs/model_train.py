@@ -47,6 +47,11 @@ def train_on_dataset(ds_list, config):
         os.makedirs(save_to + '/losses')
         os.makedirs(save_to + '/metrics')
 
+
+    if config.save_model:
+        torch.save(learn.model.state_dict(), save_to+"/model.pth")
+    print("SAVED MODEL")
+
     plt.figure(figsize=(8, 5))  
     learn.recorder.plot_loss(skip_start=0, with_valid=True)
     plt.ylabel('Loss')
@@ -155,6 +160,7 @@ if __name__ == "__main__":
     parser.add_argument("--average", type = int, default = 1) # whether or not to use averaging 
     # parser.add_argument("--normalize", type = int, default = 0) # whether or not to normalize from -1 to 1
     parser.add_argument("--metric", type = str, default = 'smape') 
+    parser.add_argument("--save_model", type = int, default = 0) # whether or not to save the model
 
     # Set defaults 
     args = parser.parse_args()
@@ -170,7 +176,8 @@ if __name__ == "__main__":
     config = AttrDict(config_base)
     
     config.partial_loss = [0] if args.partial_loss == 1 else None
-    for key in ['ds_list', 'launch_rate', 'init_pop', 'horizon', 'lookback', 'gap', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss', 'sample', 'log', 'average', 'metric']:   
+    keys = ['ds_list', 'launch_rate', 'init_pop', 'horizon', 'lookback', 'gap', 'stride', 'bs', 'n_epoch', 'sel_steps', 'key', 'loss', 'sample', 'log', 'average', 'metric', 'save_model']
+    for key in keys:
         config[key] = arg_dict[key]
 
     if config['loss'] == 'mbd':
