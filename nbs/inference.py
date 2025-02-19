@@ -17,9 +17,11 @@ def forecast(config):
     
     # Load data
     ds_name = f'x{config.init_pop}x{config.launch_rate}x{config.pmd:.2f}x{config.cam:.2f}'
-    with h5py.File(config.data_path, "r") as file:
-        ds = file[ds_name]
-        initial_data = ds['time_series'][:50].sum(axis=-1)
+    with h5py.File(config.data_path, 'r') as f:
+        time_series_data = f['time_series'][:]  
+        dataset_names = f['dataset_names'][:].astype(str).tolist() 
+        ind = dataset_names.index(ds_name)
+        initial_data = time_series_data[ind][:50].sum(axis=-1)
 
     # Forecasting
     initial_data = torch.log(torch.tensor(initial_data, device= default_device()).float()+1)
@@ -77,8 +79,6 @@ def make_gif(preds, stride=10):
 
 
 
-
-
 if __name__ == "__main__":    
     # Parser
     parser = argparse.ArgumentParser(description = "100 year forecasting")
@@ -88,13 +88,13 @@ if __name__ == "__main__":
     parser.add_argument("--launch_rate", type = int, default = 2)   
     parser.add_argument("--pmd", type = float, default = 0.90)
     parser.add_argument("--cam", type = float, default = 0.90)
-    parser.add_argument("--model_path", type = str, default = "../pretrained_model/model_ip_[1]_lr_[1, 2]_pmd_[0.9, 0.95, 0.96, 0.97, 0.98, 0.99]_cam_[0.9, 0.95, 0.96, 0.97, 0.98, 0.99].pth")
-    parser.add_argument("--data_path", type = str, default = "../example_data/comb_Am_rp_ip_[1,1]_lr_[2,2]_pmd_[0.9, 0.95, 0.96, 0.97, 0.98, 0.99]_cam_[0.9, 0.95, 0.96, 0.97, 0.98, 0.99].hdf5")
+    parser.add_argument("--model_path", type = str, default = "../pretrained_model/model_ip_[1, 2]_lr_[1, 2]_pmd_[0.9, 0.95, 0.96, 0.97, 0.98, 0.99]_cam_[0.9, 0.95, 0.96, 0.97, 0.98, 0.99].pth")
+    parser.add_argument("--data_path", type = str, default = "../example_data/comb_Am_rp_ip_[1,2]_lr_[0,2]_pmd_[0.9, 0.95, 0.96, 0.97, 0.98, 0.99]_cam_[0.9, 0.95, 0.96, 0.97, 0.98, 0.99].hdf5")
     args = parser.parse_args()
 
     # Inference 
     preds = forecast(args)
 
-    # Visualization - Plotting log might be more descriptive
+    # Visualization 
     gif = make_gif(preds)
     gif.save('forecast.gif') 
