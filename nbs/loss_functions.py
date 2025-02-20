@@ -10,6 +10,9 @@ from mocatml.models.conv_rnn import *
 import torch 
 import torch.nn as nn
 
+
+
+
 class MAPELoss(nn.Module):
     def __init__(self, eps=1e-8):
         super(MAPELoss, self).__init__()
@@ -19,15 +22,8 @@ class MAPELoss(nn.Module):
         absolute_diff = torch.abs(y - y_hat)
         percentage_error = torch.div(absolute_diff, torch.clamp(torch.abs(y), min=self.eps))
         return torch.mean(percentage_error)
-    
 
-class SMAPELoss(nn.Module):
-    def __init__(self):
-        super(SMAPELoss, self).__init__()
 
-    def forward(self, y, y_hat):
-        percentage_error = torch.div(torch.abs(y - y_hat), torch.abs(y) + torch.abs(y_hat)) 
-        return torch.mean(torch.nan_to_num(percentage_error, 0))
 
 class MBDLoss(nn.Module):
     def __init__(self, alpha):
@@ -43,6 +39,8 @@ class MBDLoss(nn.Module):
         mbd_loss = (1 - self.alpha) * mse_loss + self.alpha * mae_loss
         return mbd_loss
 
+
+
 class RMSLELoss(nn.Module):
     def __init__(self):
         super().__init__()
@@ -50,9 +48,11 @@ class RMSLELoss(nn.Module):
         
     def forward(self, pred, actual):
         return torch.sqrt(self.mse(torch.log(pred + 1), torch.log(actual + 1)))
+    
 
 
-def get_loss_func_and_metrics(config):
+
+def get_loss_function(config):
     if config.partial_loss is not None:
         if config['loss'] == 'mse':
             loss_func = PartialStackLoss(config.partial_loss, loss_func=MSELossFlat())
@@ -66,12 +66,10 @@ def get_loss_func_and_metrics(config):
             loss_func = PartialStackLoss(config.partial_loss, loss_func=MAPELoss())
         if config['loss'] == 'rmsle':
             loss_func = PartialStackLoss(config.partial_loss, loss_func=RMSLELoss())
-        if config['loss'] == 'smape':
-            loss_func = PartialStackLoss(config.partial_loss, loss_func=SMAPELoss())
 
         full_loss = StackLoss()
         full_loss.__name__ = "full_loss"
-        metrics = [full_loss] 
+        # metrics = [full_loss] 
 
     else:
         if config['loss'] == 'mse':
@@ -87,7 +85,67 @@ def get_loss_func_and_metrics(config):
         if config['loss'] == 'rmsle':
             loss_func = StackLoss(RMSLELoss())
 
-    if config['metric'] == 'smape':
-        metrics = [StackLoss(SMAPELoss())]
-        metrics[0].__name__ = "SMAPE"
-    return loss_func, metrics
+    return loss_func
+
+
+
+
+class oldSMAPE(nn.Module):
+    def __init__(self, log=0):
+        super(oldSMAPE, self).__init__()
+        self.log = log
+
+    def forward(self, y, y_hat):
+        if self.log:
+            y, y_hat = torch.exp(y)-1, torch.exp(y_hat)-1
+        percentage_error = torch.div(torch.abs(y - y_hat), torch.abs(y) + torch.abs(y_hat)) 
+        return 2*torch.mean(torch.nan_to_num(percentage_error, 0))
+    
+
+
+class logSMAPE(nn.Module):
+    def __init__(self, log=0):
+        super(logSMAPE,self).__init__()
+        self.log = log 
+
+    def forward(self, y, y_hat):
+        if not self.log:
+            y, y_hat = torch.log(y+1), torch.log(y_hat+1)
+        percentage_error = torch.div(torch.abs(y - y_hat), torch.abs(y) + torch.abs(y_hat)) 
+        return 2*torch.mean(torch.nan_to_num(percentage_error, 0))
+
+
+
+class totalSMAPE(nn.Module):
+    def __init__(self, log=0):
+        super(totalSMAPE,self).__init__()
+        self.log = log 
+
+
+    def forward(self, y, y_hat):
+        if self.log:
+            y, y_hat = torch.exp(y)-1, torch.exp(y_hat)-1
+
+        return 2*torch.div(torch.abs(torch.sum(y) - torch.sum(y_hat)), torch.sum(torch.abs(y)) + torch.sum(torch.abs(y_hat)))
+        
+
+class newSMAPE(nn.Module):
+    def __init__(self, log=0):
+        super(newSMAPE,self).__init__()
+        self.log = log 
+
+    def forward(self, y, y_hat):
+        if self.log:    
+            y, y_hat = torch.exp(y)-1, torch.exp(y_hat)-1
+        
+        return 2*torch.div(torch.sum(torch.abs(y-y_hat)), torch.sum(torch.abs(y)) + torch.sum(torch.abs(y_hat)))
+
+
+
+def get_metrics(config):
+    metrics = [StackLoss(oldSMAPE(config.log)), StackLoss(logSMAPE(config.log)), StackLoss(totalSMAPE(config.log)), StackLoss(newSMAPE(config.log))]
+    for i, name in enumerate(["old_smape", "log_smape", "total_smape", "new_smape"]):
+        metrics[i].__name__ = name
+    return metrics
+
+

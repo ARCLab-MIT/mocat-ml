@@ -21,6 +21,8 @@ from matplotlib.animation import FuncAnimation
 
 KEYS=["comb_Am_inc", "comb_Am_ra", "comb_Am_rp", "comb_inc_ra", "comb_inc_rp", "comb_ra_rp"]
 
+
+
 def get_dataset(ds_name, config):  
     path = f'{config.data.path}/{ds_name}/TLE_density_all.mat' # Use absolute path 
     mat = h5py.File(path, 'r')
@@ -172,18 +174,18 @@ def get_dataloader_diffusion(config):
     if config.log:
         data = np.log(data + 1)
 
-    # if config.normalize:
-    #     num_sim, num_timesteps, _, _ = data.shape
-    #     normalized_data = np.zeros_like(data)
-    #     max_value = np.max(data)
-    #     min_value = np.min(data)
-    #     for s in range(num_sim):
-    #         for t in range(num_timesteps):
-    #             timestep_data = data[s][t]
-    #             normalized_data[s][t] = (timestep_data - min_value) / (max_value - min_value) #0 to 1
-    #             normalized_data[s][t] = normalized_data[s][t] * 2 - 1 # -1 to 1
+    if config.normalize:
+        num_sim, num_timesteps, _, _ = data.shape
+        normalized_data = np.zeros_like(data)
+        max_value = np.max(data)
+        min_value = np.min(data)
+        for s in range(num_sim):
+            for t in range(num_timesteps):
+                timestep_data = data[s][t]
+                normalized_data[s][t] = (timestep_data - min_value) / (max_value - min_value) #0 to 1
+                normalized_data[s][t] = normalized_data[s][t] * 2 - 1 # -1 to 1
 
-    #     data = normalized_data
+        data = normalized_data
     
     data_sw = np.lib.stride_tricks.sliding_window_view(data, lkb + hrzn + gap, axis=1)[:,::stride,:]
     data_sw = data_sw.transpose(0,1,4,2,3)
@@ -221,66 +223,6 @@ def get_dataloader_diffusion(config):
 
 
 
-def get_dataset_4d(config):
-    num_sim = 10
-    data = np.zeros((num_sim, 2436, 16, 16, 16, 16))
-    ds = config.ds
-    for i in range(num_sim):
-        path = f'/mnt/data/sumiya/mocat-ml/4d_16/{ds}/TLE_density_{i}.mat'
-        mat = h5py.File(path, 'r')
-        data[i]= np.array(mat["comb_ra_rp_inc_Am"])[:, :config.sel_steps]  
-    data_sw = np.lib.stride_tricks.sliding_window_view(data, config.lookback + config.horizon + config.gap, axis=1)[:,::config.stride,:]
-    data_sw = data_sw.transpose(0,1,6,2,3,4,5)
-    data_sw = data_sw.reshape(-1, *data_sw.shape[2:])
-    return data, data_sw
-
-
-
-def get_dataloader_4d(config):
-    data, data_sw = get_dataset_4d(config)
-    print(data.shape, data_sw.shape)
-    
-    splits = RandomSplitter()(data) #valid_pct=0.2,
-    ds = DensityData(data_sw, lbk=config.lookback, h=config.horizon, gap=config.gap)
-    samples_per_simulation = data_sw.shape[0]//(data.shape[0])
-    train_idxs = calculate_sample_idxs(splits[0], samples_per_simulation)
-    valid_idxs = calculate_sample_idxs(splits[1], samples_per_simulation)
-
-    print(len(train_idxs), len(valid_idxs))
-
-    mocat_stats = (np.mean(data[splits[0]]), np.std(data[splits[0]]))
-
-    train_tl = TfmdLists(train_idxs, DensityTupleTransform(ds))
-    valid_tl = TfmdLists(valid_idxs, DensityTupleTransform(ds))
-    
-    dls = DataLoaders.from_dsets(train_tl, valid_tl, bs=config['bs'], device=default_device(),
-                        after_batch=[Normalize.from_stats(*mocat_stats)] if \
-                        config.normalize else None,
-                        num_workers=config.num_workers, distributed=config.num_workers>0)
-    
-    return dls, splits, data, data_sw
-
-
-def plot_loss(recorder, skip_start=0, with_valid=True, log=False, show_epochs=False, ax=None):
-    if not ax:
-        ax=plt.gca()
-    if log:
-        ax.loglog(list(range(skip_start, len(recorder.losses))), recorder.losses[skip_start:], label='train')
-    else:
-        ax.plot(list(range(skip_start, len(recorder.losses))), recorder.losses[skip_start:], label='train')
-    if show_epochs:
-        for x in recorder.iters:
-            ax.axvline(x, color='grey', ls=':')
-    ax.set_ylabel('loss')
-    ax.set_xlabel('steps')
-    if with_valid:
-        idx = (np.array(recorder.iters)<skip_start).sum()
-        valid_col = recorder.metric_names.index('valid_loss') - 1 
-        ax.plot(recorder.iters[idx:], L(recorder.values[idx:]).itemgot(valid_col), label='valid')
-        ax.legend()
-    return ax
-
-
 def get_n_params(model):
     pp=0
     for p in list(model.parameters()):
@@ -290,41 +232,6 @@ def get_n_params(model):
         pp += nn
     return pp
 
-
-
-def plot_preds(learn, config, X, X_sw, save_folder, years_to_plot = [1/6, 1, 2, 3, 4, 5, 10, 100]):
-    train_stats = (learn.dls.train.after_batch.mean, learn.dls.train.after_batch.std)
-    ds_full = DensityData(X, lbk=config.lookback, h=config.horizon)
-    tl_full = TfmdLists(range(len(ds_full)), DensityTupleTransform(ds_full))
-    dl_full = TfmdDL(tl_full, bs=learn.dls.valid.bs, shuffle=False, num_workers=0, 
-                after_batch=Normalize.from_stats(*train_stats))
-
-    for year in years_to_plot:
-        n_iter = (X.shape[1]*year)//(config.horizon*100) - 1 if year>= 1 else 1
-        print(year, n_iter)
-
-        inps, preds, targs, losses = learn.get_preds_iterative(dl=dl_full, n_iter=n_iter, track_losses=True, with_input=True)
-
-        if not os.path.exists(save_folder+f"{year}/"):
-            os.makedirs(save_folder+f"{year}")
-
-        if year == 100:
-            plt.clf()
-            plt.plot(np.linspace(0, 100, losses.shape[0]), losses)
-            plt.xlabel("Years")
-            plt.ylabel(f"Loss ({config['loss']})")
-            plt.savefig(f"{save_folder}/loss-100-years.jpg")
-
-            with open(f"{save_folder}/loss-100-years.txt", "w") as output:
-                output.write(str(losses))
-
-        title_input = "input"
-        title_pred = f"{year} year-ahead predictions Loss: {losses[-1]}" if year > 1 else f"2 month-ahead predicitons Loss: {losses[-1]}"
-        title_target = f"{year} year-ahead targets" if year > 1 else f"2 month-ahead targets"
-
-        learn.show_preds_at(0, p=preds, t=targs, inp=inps, save=True, save_path = save_folder+f"{year}/", with_targets=True, 
-                        with_input=True, start_epoch=(n_iter-1)*config.horizon,
-                    titles=[title_input, title_pred, title_target])
         
 
 def plot_metrics(metric_scores_by_year, metric_scores_full, save_folder, stride=10):
@@ -339,8 +246,8 @@ def plot_metrics(metric_scores_by_year, metric_scores_full, save_folder, stride=
         ])
 
         # Create the heatmap
-        plt.figure(figsize=(8, 6))
-        heatmap = plt.imshow(metrics, cmap='Blues', aspect='auto')
+        plt.figure(figsize=(12, 12))
+        heatmap = plt.imshow(metrics, cmap='Blues', aspect='auto', vmin=0, vmax=1)
 
         # Add colorbar
         plt.colorbar(heatmap)
@@ -355,7 +262,7 @@ def plot_metrics(metric_scores_by_year, metric_scores_full, save_folder, stride=
         # Annotate cells with metric values
         for i in range(metrics.shape[0]):
             for j in range(metrics.shape[1]):
-                plt.text(j, i, f'{metrics[i, j]:.3f}', ha='center', va='center', color='black')
+                plt.text(j, i, f'{metrics[i, j]:.2f}', ha='center', va='center', color='black')
 
         # Show the plot
         plt.tight_layout()
@@ -363,7 +270,7 @@ def plot_metrics(metric_scores_by_year, metric_scores_full, save_folder, stride=
         plt.show()
 
     # Create the heatmap gif
-    fig, ax = plt.subplots(figsize=(4, 4))
+    fig, ax = plt.subplots(figsize=(12, 12))
 
     # Create images for the first and second distributions
     metrics = np.array([
@@ -410,46 +317,3 @@ def plot_metrics(metric_scores_by_year, metric_scores_full, save_folder, stride=
     # Save the animation as a GIF
     ani.save(f'{save_folder}/SMAPE_evolution.gif', writer='imagemagick', fps=20) 
     plt.show()
-
-
-def save_results(config, lookback, horizon, preds, save_to, epoch, long_term=False, iter_num=None):
-    n, figsize = config.lookback, (4, 3)
-    fig, axs = plt.subplots(nrows = 4, ncols=n, figsize=(figsize[0]*n, 5*figsize[1]), squeeze=False)  
-
-    if not os.path.exists(save_to):
-        os.makedirs(save_to)
-
-    for i, lkb, hor, pred in zip(range(config.lookback), lookback, horizon, preds):
-        if config.log:
-            lkb, hor, pred = torch.exp(lkb)-config.eps, torch.exp(hor)-config.eps, torch.exp(pred)-config.eps
-
-        axs[0, i].imshow(lkb.detach().cpu(), aspect = 'auto')
-        axs[0, i].set_title('Input')
-
-        axs[1, i].imshow(hor.cpu(), aspect = 'auto')
-        axs[1, i].set_title('Target')
-            
-        axs[2, i].imshow(pred.detach().cpu().numpy(), aspect = 'auto')
-        axs[2, i].set_title('Prediction')
-
-        diff_pred_lkb = torch.abs(pred - hor)
-        abs_diff = round(torch.sum(torch.abs(diff_pred_lkb)).item()/torch.sum(torch.abs(hor)).item(), 2)
-        pcm  = axs[3, i].imshow(diff_pred_lkb.detach().cpu().numpy(), aspect = 'auto', cmap = 'coolwarm')
-        axs[3, i].set_title('Pred/Target Percent Error: ' + str(abs_diff))
-                            
-        fig.colorbar(pcm, ax=axs[3, i])
-
-        for ax in axs:
-            ax[i].axis('on')
-
-    plt.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95) 
-    # plt.title(f"One step ahead prediction after {epoch} epochs")
-    plt.tight_layout()
-    if long_term:
-        plt.savefig(f"{save_to}/{iter_num}")
-        
-    else:
-        plt.savefig(f"{save_to}/1 step prediction after {epoch} epochs")
-    plt.show()
-    plt.close()
-
