@@ -1,0 +1,34 @@
+bs: 32 # batch size
+data:
+    path: '~/mocat-ml/data/TLE_density_all_'
+    dataset: ['x2x2', 'x5x5', 'x10x10', 'x15x15']
+    include: True
+    to_run: ['x10x10', 'x15x15'] # 1 to run on all the datasets
+device: 'cuda' # 'cpu' or 'cuda'
+gap: 0 # gap between the last step of the lookback and the first step of the horizon
+horizon: 8 # number of steps into the future
+lr_max: null # Maximum learning rate. If none, it will be computed automatically
+lookback: 8 # number of previous steps to consider
+mmap: True
+n_epoch: 20 # Number of epochs to train for
+normalize: True
+num_workers: 0
+# Array with steps of the prediction to compute the loss. 
+# If null, it will be computed for all steps
+partial_loss: [0] 
+seed: null # random seed (null for random)
+save_learner: True # Save learner locally
+sel_steps: null # number of steps to select (null to select all of them)
+stride: 8 # number of steps between two consecutive windows (null for non-overlapping windows)
+tmp_folder: 'tmp' # Folder to store temporary files
+num_run: 5
+norm:
+  mean: null # If null, it will be retrieved from the learner
+  std: null # If null, it will be retrieved from the learner
+wandb:
+  dir: null # By default it is located in the root of the project
+  enabled: False # To use it, the environment variable WANDB_API_KEY must be set
+  log_learner: False # Log learner to wandb
+  mode: 'offline' # 'online' or 'offline' for wandb
+  group: null # Useful to group runs that belong to the same optuna study
+  project: 'mocatml' # Name of wandb project

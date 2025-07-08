@@ -6,14 +6,26 @@
 .Trash-1000
 # Ignore every folder named wandb, regardless of where it is
 wandb
-nbs/models
+setup.txt
 time_model
 data_numpy
+data
+nbs/resnet
 
-#Ignore results (Sumiya)
+
+#Ignore results and config (Sumiya)
 plots
 training_plots
 draft_nbs
+gifs
+nbs/mocat-ml.code-workspace
+.gitignore
+nbs/config
+nbs/create_gifs
+nbs/results
+nbs/sumiya.code-workspace
+nbs/models
+nbs/logs
 
 # Ignore the content of the folders starting with Trash-
 .Trash-*/

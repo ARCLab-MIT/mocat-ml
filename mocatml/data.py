@@ -104,6 +104,10 @@ class DensityData:
         seq = self.data[idx]  # Shape: (lbk+gap+h, height, width)
         input = seq[:self.lbk]
         output = seq[self.lbk+self.gap:self.lbk+self.gap+self.h]
+
+
+        if len(input.shape) == 4:
+            return torch.from_numpy(input).float(), torch.from_numpy(output).float()
         
         input_tensor = torch.from_numpy(input).float().unsqueeze(1)  # Add channel dimension
         output_tensor = torch.from_numpy(output).float().unsqueeze(1)  # Add channel dimension
